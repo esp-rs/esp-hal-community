@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+# Cancel any currently running workflows from the same PR, branch, or
+# tag when a new workflow is triggered.
+#
+# https://stackoverflow.com/a/66336834
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Check
+
+  check:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [
+            # RISC-V devices:
+            { soc: "esp32c2", target: "riscv32imc-unknown-none-elf" },
+            { soc: "esp32c3", target: "riscv32imc-unknown-none-elf" },
+            { soc: "esp32c6", target: "riscv32imac-unknown-none-elf" },
+            { soc: "esp32h2", target: "riscv32imac-unknown-none-elf" },
+            # Xtensa devices:
+            { soc: "esp32", target: "xtensa-esp32-none-elf" },
+            { soc: "esp32s2", target: "xtensa-esp32s2-none-elf" },
+            { soc: "esp32s3", target: "xtensa-esp32s3-none-elf" },
+          ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install the Rust stable toolchain for RISC-V devices:
+      - if: ${{ startsWith(matrix.device.target, 'riscv32') }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rust-src
+          target: ${{ matrix.device.target }}
+      # Install the Rust toolchain for Xtensa devices:
+      - if: ${{ startsWith(matrix.device.target, 'xtensa') }}
+        uses: esp-rs/xtensa-toolchain@v1.5
+        with:
+          default: true
+          ldproxy: false
+
+      - uses: Swatinem/rust-cache@v2
+
+      # NOTE: The ESP32-C2 does *not* have the RMT peripheral
+      - if: ${{ matrix.device.soc != 'esp32c2' }}
+        name: Check esp-hal-smartled
+        uses: ./.github/actions/check-package
+        with:
+          package: esp-hal-smartled
+          soc: ${{ matrix.device.soc }}
+          target: ${{ matrix.device.target }}

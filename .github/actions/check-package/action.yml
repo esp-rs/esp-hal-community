@@ -1,0 +1,30 @@
+name: Check package
+description: Check a package for the given chip and build target
+
+inputs:
+  package:
+    description: Name of the package to check
+    required: true
+  soc:
+    description: SoC to target
+    required: true
+  target:
+    description: Build target of the SoC
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # Build the package (RISC-V):
+    - if: ${{ startsWith(inputs.target, 'riscv') }}
+      shell: bash
+      run: |
+        cd ${{ inputs.package }}
+        cargo check --features=${{ inputs.soc }} --target=${{ inputs.target }}
+
+    # Build the package (Xtensa):
+    - if: ${{ startsWith(inputs.target, 'xtensa') }}
+      shell: bash
+      run: |
+        cd ${{ inputs.package }}
+        cargo check -Zbuild-std=core --features=${{ inputs.soc }} --target=${{ inputs.target }}
