@@ -1,0 +1,41 @@
+[package]
+name         = "esp-hal-smartled"
+version      = "0.13.0"
+edition      = "2021"
+rust-version = "1.76.0"
+description  = "RMT peripheral adapter for smart LEDs"
+repository   = "https://github.com/esp-rs/esp-hal-community"
+license      = "MIT OR Apache-2.0"
+
+[package.metadata.docs.rs]
+features = ["esp32c6"]
+targets  = ["riscv32imac-unknown-none-elf"]
+
+[dependencies]
+defmt             = { version = "0.3.8", optional = true }
+document-features = "0.2.10"
+esp-hal           = "0.20.0"
+fugit             = "0.3.7"
+smart-leds-trait  = "0.3.0"
+
+[features]
+## Implement `defmt::Format` on certain types.
+defmt = ["dep:defmt", "esp-hal/defmt"]
+
+#! ### Chip Support Feature Flags
+## Target the ESP32.
+esp32 = ["esp-hal/esp32"]
+## Target the ESP32-C3.
+esp32c3 = ["esp-hal/esp32c3"]
+## Target the ESP32-C6.
+esp32c6 = ["esp-hal/esp32c6"]
+## Target the ESP32-H2.
+esp32h2 = ["esp-hal/esp32h2"]
+## Target the ESP32-S2.
+esp32s2 = ["esp-hal/esp32s2"]
+## Target the ESP32-S3.
+esp32s3 = ["esp-hal/esp32s3"]
+
+# TODO: Remove patch prior to next release
+[patch.crates-io]
+esp-hal = { git = "https://github.com/esp-rs/esp-hal", rev = "d44affc" }
