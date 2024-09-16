@@ -14,8 +14,16 @@ targets  = ["riscv32imc-unknown-none-elf"]
 [dependencies]
 defmt             = { version = "0.3.8", optional = true }
 document-features = "0.2.10"
-esp-hal           = "0.20.0"
+esp-hal           = "0.20.1"
 fugit             = "0.3.7"
+
+[dev-dependencies]
+esp-backtrace = { version = "0.14.1", features = [
+  "exception-handler",
+  "panic-handler",
+  "println",
+] }
+esp-println = "0.11.0"
 
 [features]
 ## Implement `defmt::Format` on certain types.
@@ -23,16 +31,20 @@ defmt = ["dep:defmt", "esp-hal/defmt"]
 
 #! ### Chip Support Feature Flags
 ## Target the ESP32.
-esp32   = ["esp-hal/esp32"]
+esp32 = ["esp-backtrace/esp32", "esp-hal/esp32", "esp-println/esp32"]
 ## Target the ESP32-C2.
-esp32c2 = ["esp-hal/esp32c2"]
+esp32c2 = ["esp-backtrace/esp32c2", "esp-hal/esp32c2", "esp-println/esp32c2"]
 ## Target the ESP32-C3.
-esp32c3 = ["esp-hal/esp32c3"]
+esp32c3 = ["esp-backtrace/esp32c3", "esp-hal/esp32c3", "esp-println/esp32c3"]
 ## Target the ESP32-C6.
-esp32c6 = ["esp-hal/esp32c6"]
+esp32c6 = ["esp-backtrace/esp32c6", "esp-hal/esp32c6", "esp-println/esp32c6"]
 ## Target the ESP32-H2.
-esp32h2 = ["esp-hal/esp32h2"]
+esp32h2 = ["esp-backtrace/esp32h2", "esp-hal/esp32h2", "esp-println/esp32h2"]
 ## Target the ESP32-S2.
-esp32s2 = ["esp-hal/esp32s2"]
+esp32s2 = ["esp-backtrace/esp32s2", "esp-hal/esp32s2", "esp-println/esp32s2"]
 ## Target the ESP32-S3.
-esp32s3 = ["esp-hal/esp32s3"]
+esp32s3 = ["esp-backtrace/esp32s3", "esp-hal/esp32s3", "esp-println/esp32s3"]
+
+# Patch until https://github.com/esp-rs/esp-hal/pull/1984 is merged
+[patch.crates-io]
+esp-hal = { git = "https://github.com/AnthonyGrondin/esp-hal", rev = "00248bc" }
