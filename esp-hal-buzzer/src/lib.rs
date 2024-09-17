@@ -36,12 +36,11 @@ use core::{fmt::Debug, ops::DerefMut};
 use esp_hal::{
     clock::Clocks,
     delay::Delay,
-    gpio::{AnyPin, CreateErasedPin, InputPin, Level, Output, OutputPin},
+    gpio::{AnyPin, Level, Output, OutputPin, Pin},
     ledc::{
         channel::{self, Channel, ChannelIFace},
         timer::{self, Timer, TimerHW, TimerIFace, TimerSpeed},
-        Ledc,
-        LowSpeed,
+        Ledc, LowSpeed,
     },
     peripheral::{Peripheral, PeripheralRef},
 };
@@ -110,9 +109,9 @@ pub enum VolumeType {
 }
 
 /// Volume configuration for the buzzer
-struct Volume<'a> {
+struct Volume {
     /// Output pin for the volume
-    volume_pin: AnyPin<'a>,
+    volume_pin: AnyPin,
 
     /// Type of the volume
     volume_type: VolumeType,
@@ -130,8 +129,7 @@ pub struct Buzzer<'a, S: TimerSpeed, O: OutputPin> {
     channel_number: channel::Number,
     output_pin: PeripheralRef<'a, O>,
     delay: Delay,
-    volume: Option<Volume<'a>>,
-    clocks: &'a Clocks<'a>,
+    volume: Option<Volume>,
 }
 
 impl<'a, S: TimerSpeed, O: OutputPin + Peripheral<P = O>> Buzzer<'a, S, O>
@@ -146,27 +144,25 @@ where
         timer_number: timer::Number,
         channel_number: channel::Number,
         output_pin: impl Peripheral<P = O> + 'a,
-        clocks: &'a Clocks,
     ) -> Self {
         let timer = ledc.get_timer(timer_number);
         Self {
             timer,
             channel_number,
             output_pin: output_pin.into_ref(),
-            delay: Delay::new(clocks),
-            volume: None::<Volume<'a>>,
-            clocks,
+            delay: Delay::new(),
+            volume: None::<Volume>,
         }
     }
 
     /// Add a volume control for the buzzer.
-    pub fn with_volume<V: OutputPin + InputPin + CreateErasedPin>(
+    pub fn with_volume<V>(
         mut self,
-        volume_pin: impl Peripheral<P = V> + 'a,
+        volume_pin: impl Peripheral<P = V> + Pin + 'a,
         volume_type: VolumeType,
     ) -> Self {
         self.volume = Some(Volume {
-            volume_pin: AnyPin::new(volume_pin),
+            volume_pin: volume_pin.degrade(),
             volume_type,
             level: 50,
         });
@@ -256,7 +252,7 @@ where
         // Max duty resolution for a frequency:
         // Integer(log2(LEDC_APB_CKL / frequency))
         let mut result = 0;
-        let mut value = (self.clocks.apb_clock / frequency).raw();
+        let mut value = (Clocks::get().apb_clock / frequency).raw();
 
         // Limit duty resolution to 14 bits
         while value > 1 && result < 14 {

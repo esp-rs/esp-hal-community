@@ -17,11 +17,11 @@ use esp_println::println;
 
 #[entry]
 fn main() -> ! {
-    let (peripherals, clocks) = esp_hal::init(esp_hal::Config::default());
+    let peripherals = esp_hal::init(esp_hal::Config::default());
 
     let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
 
-    let mut ledc = Ledc::new(peripherals.LEDC, &clocks);
+    let mut ledc = Ledc::new(peripherals.LEDC);
     ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
 
     let mut buzzer = Buzzer::new(
@@ -29,7 +29,6 @@ fn main() -> ! {
         timer::Number::Timer0,
         channel::Number::Channel1,
         io.pins.gpio6,
-        &clocks,
     );
 
     buzzer.play_song(DOOM).unwrap();
