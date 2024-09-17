@@ -64,3 +64,10 @@ jobs:
           package: esp-hal-smartled
           soc: ${{ matrix.device.soc }}
           target: ${{ matrix.device.target }}
+
+      - name: Check esp-hal-buzzer
+        uses: ./.github/actions/check-package
+        with:
+          package: esp-hal-buzzer
+          soc: ${{ matrix.device.soc }}
+          target: ${{ matrix.device.target }}
