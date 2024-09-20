@@ -8,6 +8,22 @@ A collection of crates for use alongside [esp-hal], but which are maintained by 
 
 [esp-hal]: https://github.com/esp-rs/esp-hal/
 
+## Contributing a Crate
+
+If you have a crate which depends on `esp-hal` and provides some additional functionality, we encourage you to contribute it to this repository!
+
+When opening a pull request to add a new crate, we ask that you please ensure the following criteria are met:
+
+- The new crate follows the `esp-hal-*` naming convention
+- The new crate contains `CHANGELOG.md` and `README.md` files, following the formatting of other crates in this repository
+- The new crate is added to the CI workflow
+- The new crate has been added to `CODEOWNERS` along with your username
+  - If you are unable or unwilling to take ownership of this crate for whatever reason, please state such in your pull request and we can try to find an owner for it
+
+Upon approval of your pull request, you will be granted Maintainer privileges on the repository and be added as an owner on [crates.io], assuming you are commiting to be code owner for the added crate.
+
+[crates.io]: https://crates.io
+
 ## License
 
 Licensed under either of:
