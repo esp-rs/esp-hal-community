@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.13.1
+
 ### Added
 
 ### Changed
+
+- Bump allowed ESP HAL version to >=0.20.0, <=0.21.0
 
 ### Fixed
 
