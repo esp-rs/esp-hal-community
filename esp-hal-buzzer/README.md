@@ -14,6 +14,36 @@ A few songs are included in the [songs](./src/songs.rs) module. Contributions ar
 
 [documentation]: https://docs.rs/esp-hal-buzzer/
 
+## Examples
+
+We have provided Cargo aliases to simplify the process of building and flashing the examples.
+
+Please first make sure that you have installed [espflash]:
+
+```
+cargo install espflash --locked
+```
+
+Additionally, if you are targeting an Xtensa chip (ESP32, ESP32-S2, or ESP32-S3) you must install the `esp` toolchain using [espup]:
+
+```
+cargo install espup
+espup install
+```
+
+Then, to run e.g. the `buzzer.rs` example, you can run:
+
+```
+cargo esp32c6 --example=buzzer
+# Xtensa chips require the `esp` toolchain:
+cargo +esp esp32s3 --example=buzzer
+```
+
+You can modify the above command to reflect the chip you wish to target. See `.cargo/config.toml` for more information on how these aliases work.
+
+[espflash]: https://github.com/esp-rs/espflash
+[espup]: https://github.com/esp-rs/espup
+
 ## Minimum Supported Rust Version (MSRV)
 
 This crate is guaranteed to compile on stable Rust 1.76 and up. It _might_
