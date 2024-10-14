@@ -44,7 +44,3 @@ esp32h2 = ["esp-backtrace/esp32h2", "esp-hal/esp32h2", "esp-println/esp32h2"]
 esp32s2 = ["esp-backtrace/esp32s2", "esp-hal/esp32s2", "esp-println/esp32s2"]
 ## Target the ESP32-S3.
 esp32s3 = ["esp-backtrace/esp32s3", "esp-hal/esp32s3", "esp-println/esp32s3"]
-
-# Patch until next esp-hal release
-[patch.crates-io]
-esp-hal = { git = "https://github.com/esp-rs/esp-hal", rev = "a787a13" }
