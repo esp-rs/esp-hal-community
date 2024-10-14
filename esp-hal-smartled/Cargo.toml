@@ -1,8 +1,8 @@
 [package]
 name         = "esp-hal-smartled"
-version      = "0.13.0"
+version      = "0.14.0"
 edition      = "2021"
-rust-version = "1.76.0"
+rust-version = "1.79.0"
 description  = "RMT peripheral adapter for smart LEDs"
 repository   = "https://github.com/esp-rs/esp-hal-community"
 license      = "MIT OR Apache-2.0"
@@ -14,18 +14,18 @@ targets  = ["riscv32imac-unknown-none-elf"]
 [dependencies]
 defmt             = { version = "0.3.8", optional = true }
 document-features = "0.2.10"
-esp-hal           = "0.20.0"
+esp-hal           = "0.21.0"
 fugit             = "0.3.7"
 smart-leds-trait  = "0.3.0"
 
 [dev-dependencies]
 cfg-if = "1.0.0"
-esp-backtrace = { version = "0.14.1", features = [
+esp-backtrace = { version = "0.14.2", features = [
     "exception-handler",
     "panic-handler",
     "println",
 ] }
-esp-println = "0.11.0"
+esp-println = "0.12.0"
 smart-leds = "0.4.0"
 
 [features]
