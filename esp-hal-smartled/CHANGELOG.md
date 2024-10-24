@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+## 0.14.0 - 2024-10-14
+
+### Changed
+
+- Use latest release of `esp-hal` (#8)
+
+### Removed
+
 - Removed the `clocks` parameter from `SmartLedsAdapter::new` (#1999)
 
 ## 0.13.0 - 2024-08-29
