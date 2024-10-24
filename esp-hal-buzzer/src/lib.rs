@@ -39,7 +39,7 @@ use esp_hal::{
     gpio::{AnyPin, Level, Output, OutputPin, Pin},
     ledc::{
         channel::{self, Channel, ChannelIFace},
-        timer::{self, Timer, TimerHW, TimerIFace, TimerSpeed},
+        timer::{self, Timer, TimerIFace},
         Ledc, LowSpeed,
     },
     peripheral::{Peripheral, PeripheralRef},
@@ -124,20 +124,15 @@ struct Volume {
 }
 
 /// A buzzer instance driven by Ledc
-pub struct Buzzer<'a, S: TimerSpeed, O: OutputPin> {
-    timer: Timer<'a, S>,
+pub struct Buzzer<'a, O: OutputPin> {
+    timer: Timer<'a, LowSpeed>,
     channel_number: channel::Number,
     output_pin: PeripheralRef<'a, O>,
     delay: Delay,
     volume: Option<Volume>,
 }
 
-impl<'a, S: TimerSpeed, O: OutputPin + Peripheral<P = O>> Buzzer<'a, S, O>
-where
-    S: TimerSpeed<ClockSourceType = timer::LSClockSource>,
-    Timer<'a, S>: TimerHW<S>,
-    Timer<'a, S>: TimerIFace<LowSpeed>,
-{
+impl<'a, O: OutputPin + Peripheral<P = O>> Buzzer<'a, O> {
     /// Create a new buzzer for the given pin
     pub fn new(
         ledc: &'a Ledc,
