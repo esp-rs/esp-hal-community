@@ -24,7 +24,7 @@
 
 use esp_backtrace as _;
 use esp_hal::{delay::Delay, gpio::Io, prelude::*, rmt::Rmt};
-use esp_hal_smartled::{smartLedBuffer, SmartLedsAdapter};
+use esp_hal_smartled::{smart_led_buffer, SmartLedsAdapter};
 use smart_leds::{
     brightness, gamma,
     hsv::{hsv2rgb, Hsv},
@@ -66,7 +66,7 @@ fn main() -> ! {
 
     // We use one of the RMT channels to instantiate a `SmartLedsAdapter` which can
     // be used directly with all `smart_led` implementations
-    let rmt_buffer = smartLedBuffer!(1);
+    let rmt_buffer = smart_led_buffer!(1);
     let mut led = SmartLedsAdapter::new(rmt.channel0, led_pin, rmt_buffer);
 
     let delay = Delay::new();
