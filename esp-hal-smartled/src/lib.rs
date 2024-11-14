@@ -51,6 +51,12 @@ pub enum LedAdapterError {
     TransmissionError(RmtError),
 }
 
+impl From<RmtError> for LedAdapterError {
+    fn from(e: RmtError) -> Self {
+        LedAdapterError::TransmissionError(e)
+    }
+}
+
 /// Macro to allocate a buffer sized for a specific number of LEDs to be
 /// addressed.
 ///
@@ -113,18 +119,18 @@ where
             channel: Some(channel),
             rmt_buffer,
             pulses: (
-                u32::from(PulseCode {
-                    level1: true,
-                    length1: ((SK68XX_T0H_NS * src_clock) / 1000) as u16,
-                    level2: false,
-                    length2: ((SK68XX_T0L_NS * src_clock) / 1000) as u16,
-                }),
-                u32::from(PulseCode {
-                    level1: true,
-                    length1: ((SK68XX_T1H_NS * src_clock) / 1000) as u16,
-                    level2: false,
-                    length2: ((SK68XX_T1L_NS * src_clock) / 1000) as u16,
-                }),
+                PulseCode::new(
+                    true,
+                    ((SK68XX_T0H_NS * src_clock) / 1000) as u16,
+                    false,
+                    ((SK68XX_T0L_NS * src_clock) / 1000) as u16,
+                ),
+                PulseCode::new(
+                    true,
+                    ((SK68XX_T1H_NS * src_clock) / 1000) as u16,
+                    false,
+                    ((SK68XX_T1L_NS * src_clock) / 1000) as u16,
+                ),
             ),
         }
     }
@@ -188,7 +194,7 @@ where
 
         // Perform the actual RMT operation. We use the u32 values here right away.
         let channel = self.channel.take().unwrap();
-        match channel.transmit(&self.rmt_buffer).wait() {
+        match channel.transmit(&self.rmt_buffer)?.wait() {
             Ok(chan) => {
                 self.channel = Some(chan);
                 Ok(())

@@ -14,7 +14,7 @@ targets  = ["riscv32imac-unknown-none-elf"]
 [dependencies]
 defmt             = { version = "0.3.8", optional = true }
 document-features = "0.2.10"
-esp-hal           = "0.20.0"
+esp-hal           = "0.21.0"
 fugit             = "0.3.7"
 smart-leds-trait  = "0.3.0"
 
