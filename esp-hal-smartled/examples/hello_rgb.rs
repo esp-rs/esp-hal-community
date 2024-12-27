@@ -23,7 +23,7 @@
 #![no_main]
 
 use esp_backtrace as _;
-use esp_hal::{delay::Delay, gpio::Io, prelude::*, rmt::Rmt};
+use esp_hal::{delay::Delay, prelude::*, rmt::Rmt};
 use esp_hal_smartled::{smartLedBuffer, SmartLedsAdapter};
 use smart_leds::{
     brightness, gamma,
@@ -35,21 +35,19 @@ use smart_leds::{
 fn main() -> ! {
     let peripherals = esp_hal::init(esp_hal::Config::default());
 
-    let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
-
     // Each devkit uses a unique GPIO for the RGB LED, so in order to support
     // all chips we must unfortunately use `#[cfg]`s:
     cfg_if::cfg_if! {
         if #[cfg(feature = "esp32")] {
-            let led_pin = io.pins.gpio33;
+            let led_pin = peripherals.GPIO33;
         } else if #[cfg(feature = "esp32c3")] {
-            let led_pin = io.pins.gpio8;
+            let led_pin = peripherals.GPIO8;
         } else if #[cfg(any(feature = "esp32c6", feature = "esp32h2"))] {
-            let led_pin = io.pins.gpio8;
+            let led_pin = peripherals.GPIO8;
         } else if #[cfg(feature = "esp32s2")] {
-            let led_pin = io.pins.gpio18;
+            let led_pin = peripherals.GPIO18;
         } else if #[cfg(feature = "esp32s3")] {
-            let led_pin = io.pins.gpio48;
+            let led_pin = peripherals.GPIO48;
         }
     }
 
