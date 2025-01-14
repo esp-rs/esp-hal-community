@@ -1,6 +1,6 @@
 [package]
 name         = "esp-hal-smartled"
-version      = "0.14.0"
+version      = "0.15.0"
 edition      = "2021"
 rust-version = "1.84.0"
 description  = "RMT peripheral adapter for smart LEDs"
@@ -15,7 +15,7 @@ targets  = ["riscv32imac-unknown-none-elf"]
 defmt             = { version = "0.3.10", optional = true }
 document-features = "0.2.10"
 esp-hal           = { version = "1.0.0-beta.0", features = ["unstable"] }
-smart-leds-trait  = "0.3.0"
+smart-leds-trait  = "0.3.1"
 
 [dev-dependencies]
 cfg-if = "1.0.0"
@@ -24,6 +24,9 @@ esp-backtrace = { version = "0.15.0", features = [
     "panic-handler",
     "println",
 ] }
+esp-hal-embassy = "0.7"
+embassy-executor = "0.7.0"
+embassy-time = "0.4.0"
 esp-println = "0.13.0"
 smart-leds = "0.4.0"
 
@@ -33,14 +36,14 @@ defmt = ["dep:defmt", "esp-hal/defmt"]
 
 #! ### Chip Support Feature Flags
 ## Target the ESP32.
-esp32 = ["esp-backtrace/esp32", "esp-hal/esp32", "esp-println/esp32"]
+esp32 = ["esp-backtrace/esp32", "esp-hal/esp32", "esp-println/esp32", "esp-hal-embassy/esp32"]
 ## Target the ESP32-C3.
-esp32c3 = ["esp-backtrace/esp32c3", "esp-hal/esp32c3", "esp-println/esp32c3"]
+esp32c3 = ["esp-backtrace/esp32c3", "esp-hal/esp32c3", "esp-println/esp32c3", "esp-hal-embassy/esp32c3"]
 ## Target the ESP32-C6.
-esp32c6 = ["esp-backtrace/esp32c6", "esp-hal/esp32c6", "esp-println/esp32c6"]
+esp32c6 = ["esp-backtrace/esp32c6", "esp-hal/esp32c6", "esp-println/esp32c6", "esp-hal-embassy/esp32c6"]
 ## Target the ESP32-H2.
-esp32h2 = ["esp-backtrace/esp32h2", "esp-hal/esp32h2", "esp-println/esp32h2"]
+esp32h2 = ["esp-backtrace/esp32h2", "esp-hal/esp32h2", "esp-println/esp32h2", "esp-hal-embassy/esp32h2"]
 ## Target the ESP32-S2.
-esp32s2 = ["esp-backtrace/esp32s2", "esp-hal/esp32s2", "esp-println/esp32s2"]
+esp32s2 = ["esp-backtrace/esp32s2", "esp-hal/esp32s2", "esp-println/esp32s2", "esp-hal-embassy/esp32s2"]
 ## Target the ESP32-S3.
-esp32s3 = ["esp-backtrace/esp32s3", "esp-hal/esp32s3", "esp-println/esp32s3"]
+esp32s3 = ["esp-backtrace/esp32s3", "esp-hal/esp32s3", "esp-println/esp32s3", "esp-hal-embassy/esp32s3"]

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.15.0
+
+### Added
+
+- New `SmartLedsAdapterAsync` which is an asynchronous, non-blocking version of the driver.
+
+## 0.14.0
+
+## 0.13.1
+
 ### Added
 
 ### Changed
