@@ -23,7 +23,7 @@
 #![no_main]
 
 use esp_backtrace as _;
-use esp_hal::{delay::Delay, prelude::*, rmt::Rmt};
+use esp_hal::{delay::Delay, main, rmt::Rmt, time::RateExtU32};
 use esp_hal_smartled::{smartLedBuffer, SmartLedsAdapter};
 use smart_leds::{
     brightness, gamma,
@@ -31,7 +31,7 @@ use smart_leds::{
     SmartLedsWrite,
 };
 
-#[entry]
+#[main]
 fn main() -> ! {
     let peripherals = esp_hal::init(esp_hal::Config::default());
 

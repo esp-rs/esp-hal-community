@@ -16,7 +16,7 @@ Allows for the use of an RMT output channel to easily interact with RGB LEDs and
 
 ## Minimum Supported Rust Version (MSRV)
 
-This crate is guaranteed to compile on stable Rust 1.79 and up. It _might_
+This crate is guaranteed to compile on stable Rust 1.84 and up. It _might_
 compile with older versions but that may change in any new patch release.
 
 ## License
