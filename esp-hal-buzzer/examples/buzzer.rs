@@ -8,18 +8,15 @@
 
 use esp_backtrace as _;
 use esp_hal::{
-    gpio::Io,
     ledc::{channel, timer, LSGlobalClkSource, Ledc},
-    prelude::*,
+    main,
 };
 use esp_hal_buzzer::{notes::*, song, Buzzer, ToneValue};
 use esp_println::println;
 
-#[entry]
+#[main]
 fn main() -> ! {
     let peripherals = esp_hal::init(esp_hal::Config::default());
-
-    let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
 
     let mut ledc = Ledc::new(peripherals.LEDC);
     ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
@@ -28,7 +25,7 @@ fn main() -> ! {
         &ledc,
         timer::Number::Timer0,
         channel::Number::Channel1,
-        io.pins.gpio6,
+        peripherals.GPIO6,
     );
 
     buzzer.play_song(DOOM).unwrap();

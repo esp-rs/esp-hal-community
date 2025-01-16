@@ -81,7 +81,7 @@ impl From<timer::Error> for Error {
 
 /// Represents a tone value to play through the buzzer
 pub struct ToneValue {
-    /// Frequency of the tone in Hz  
+    /// Frequency of the tone in Hz
     /// *Use 0 for a silent tone*
     pub frequency: u32,
 
@@ -140,7 +140,7 @@ impl<'a, O: OutputPin + Peripheral<P = O>> Buzzer<'a, O> {
         channel_number: channel::Number,
         output_pin: impl Peripheral<P = O> + 'a,
     ) -> Self {
-        let timer = ledc.get_timer(timer_number);
+        let timer = ledc.timer(timer_number);
         Self {
             timer,
             channel_number,
