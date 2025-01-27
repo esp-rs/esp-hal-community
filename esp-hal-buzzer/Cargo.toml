@@ -2,7 +2,7 @@
 name = "esp-hal-buzzer"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.76.0"
+rust-version = "1.84.0"
 description  = "Buzzer driver for esp-hal"
 repository   = "https://github.com/esp-rs/esp-hal-community"
 license      = "MIT OR Apache-2.0"
@@ -14,16 +14,16 @@ targets  = ["riscv32imc-unknown-none-elf"]
 [dependencies]
 defmt             = { version = "0.3.8", optional = true }
 document-features = "0.2.10"
-esp-hal           = "0.20.1"
+esp-hal           = "0.23.1"
 fugit             = "0.3.7"
 
 [dev-dependencies]
-esp-backtrace = { version = "0.14.1", features = [
+esp-backtrace = { version = "0.15.0", features = [
   "exception-handler",
   "panic-handler",
   "println",
 ] }
-esp-println = "0.11.0"
+esp-println = "0.13.0"
 
 [features]
 ## Implement `defmt::Format` on certain types.
@@ -44,7 +44,3 @@ esp32h2 = ["esp-backtrace/esp32h2", "esp-hal/esp32h2", "esp-println/esp32h2"]
 esp32s2 = ["esp-backtrace/esp32s2", "esp-hal/esp32s2", "esp-println/esp32s2"]
 ## Target the ESP32-S3.
 esp32s3 = ["esp-backtrace/esp32s3", "esp-hal/esp32s3", "esp-println/esp32s3"]
-
-# Patch until next esp-hal release
-[patch.crates-io]
-esp-hal = { git = "https://github.com/esp-rs/esp-hal", rev = "a787a13" }

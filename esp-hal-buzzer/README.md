@@ -16,7 +16,7 @@ A few songs are included in the [songs](./src/songs.rs) module. Contributions ar
 
 ## Minimum Supported Rust Version (MSRV)
 
-This crate is guaranteed to compile on stable Rust 1.76 and up. It _might_
+This crate is guaranteed to compile on stable Rust 1.84 and up. It _might_
 compile with older versions but that may change in any new patch release.
 
 ## License
