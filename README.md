@@ -8,6 +8,17 @@ A collection of crates for use alongside [esp-hal], but which are maintained by 
 
 [esp-hal]: https://github.com/esp-rs/esp-hal/
 
+## Examples
+
+To run the examples for either crate, either open the project at the sub-crate level or change directory:
+
+```bash
+# cd into crate directory for smartled or buzzer
+cd esp-hal-smartled
+# cargo <chip alias> --example <example name>
+cargo esp32c3 --example hello_rgb # or other chip
+```
+
 ## Contributing a Crate
 
 If you have a crate which depends on `esp-hal` and provides some additional functionality, we encourage you to contribute it to this repository!
