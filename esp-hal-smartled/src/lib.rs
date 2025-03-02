@@ -11,10 +11,10 @@
 //! ## Example
 //!
 //! ```rust,ignore
-//! let rmt = Rmt::new(peripherals.RMT, 80.MHz(), None).unwrap();
+//! let rmt = Rmt::new(peripherals.RMT, Rate::from_mhz(80)).unwrap();
 //!
 //! let rmt_buffer = smartLedBuffer!(1);
-//! let mut led = SmartLedsAdapter::new(rmt.channel0, peripherals.GPIO2, rmt_buffer);
+//! let mut led = SmartLedsAdapter::new(rmt.channel0, peripherals.GPIO8, rmt_buffer);
 //! ```
 //!
 //! ## Feature Flags
