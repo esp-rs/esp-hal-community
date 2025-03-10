@@ -27,7 +27,7 @@ use core::{fmt::Debug, slice::IterMut};
 
 use esp_hal::{
     clock::Clocks,
-    gpio::{OutputPin, Level},
+    gpio::{Level, OutputPin},
     peripheral::Peripheral,
     rmt::{Error as RmtError, PulseCode, TxChannel, TxChannelConfig, TxChannelCreator},
 };
@@ -115,13 +115,13 @@ where
             channel: Some(channel),
             rmt_buffer,
             pulses: (
-                PulseCode::new (
+                PulseCode::new(
                     Level::High,
                     ((SK68XX_T0H_NS * src_clock) / 1000) as u16,
                     Level::Low,
                     ((SK68XX_T0L_NS * src_clock) / 1000) as u16,
                 ),
-                PulseCode::new (
+                PulseCode::new(
                     Level::High,
                     ((SK68XX_T1H_NS * src_clock) / 1000) as u16,
                     Level::Low,
