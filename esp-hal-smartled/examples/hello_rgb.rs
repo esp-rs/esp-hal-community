@@ -23,7 +23,7 @@
 #![no_main]
 
 use esp_backtrace as _;
-use esp_hal::{delay::Delay, main, rmt::Rmt, time::RateExtU32};
+use esp_hal::{delay::Delay, main, rmt::Rmt, time::Rate};
 use esp_hal_smartled::{smartLedBuffer, SmartLedsAdapter};
 use smart_leds::{
     brightness, gamma,
@@ -54,9 +54,9 @@ fn main() -> ! {
     // Configure RMT peripheral globally
     cfg_if::cfg_if! {
         if #[cfg(feature = "esp32h2")] {
-            let freq = 32.MHz();
+            let freq = Rate::from_mhz(32);
         } else {
-            let freq = 80.MHz();
+            let freq = Rate::from_mhz(80);
         }
     }
 

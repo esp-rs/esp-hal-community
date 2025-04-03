@@ -11,10 +11,10 @@
 //! ## Example
 //!
 //! ```rust,ignore
-//! let rmt = Rmt::new(peripherals.RMT, 80.MHz(), None).unwrap();
+//! let rmt = Rmt::new(peripherals.RMT, Rate::from_mhz(80)).unwrap();
 //!
 //! let rmt_buffer = smartLedBuffer!(1);
-//! let mut led = SmartLedsAdapter::new(rmt.channel0, peripherals.GPIO2, rmt_buffer);
+//! let mut led = SmartLedsAdapter::new(rmt.channel0, peripherals.GPIO8, rmt_buffer);
 //! ```
 //!
 //! ## Feature Flags
@@ -27,7 +27,7 @@ use core::{fmt::Debug, slice::IterMut};
 
 use esp_hal::{
     clock::Clocks,
-    gpio::OutputPin,
+    gpio::{Level, OutputPin},
     peripheral::Peripheral,
     rmt::{Error as RmtError, PulseCode, TxChannel, TxChannelConfig, TxChannelCreator},
 };
@@ -99,35 +99,32 @@ where
         O: OutputPin + 'd,
         C: TxChannelCreator<'d, TX, O>,
     {
-        let config = TxChannelConfig {
-            clk_divider: 1,
-            idle_output_level: false,
-            carrier_modulation: false,
-            idle_output: true,
-
-            ..TxChannelConfig::default()
-        };
+        let config = TxChannelConfig::default()
+            .with_clk_divider(1)
+            .with_idle_output_level(Level::Low)
+            .with_carrier_modulation(false)
+            .with_idle_output(true);
 
         let channel = channel.configure(pin, config).unwrap();
 
         // Assume the RMT peripheral is set up to use the APB clock
         let clocks = Clocks::get();
-        let src_clock = clocks.apb_clock.to_MHz();
+        let src_clock = clocks.apb_clock.as_mhz();
 
         Self {
             channel: Some(channel),
             rmt_buffer,
             pulses: (
-                PulseCode::new (
-                    true,
+                PulseCode::new(
+                    Level::High,
                     ((SK68XX_T0H_NS * src_clock) / 1000) as u16,
-                    false,
+                    Level::Low,
                     ((SK68XX_T0L_NS * src_clock) / 1000) as u16,
                 ),
-                PulseCode::new (
-                    true,
+                PulseCode::new(
+                    Level::High,
                     ((SK68XX_T1H_NS * src_clock) / 1000) as u16,
-                    false,
+                    Level::Low,
                     ((SK68XX_T1L_NS * src_clock) / 1000) as u16,
                 ),
             ),
