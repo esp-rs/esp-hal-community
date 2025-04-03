@@ -12,7 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
+- Upgrade esp-hal to 1.0.0-beta.0 (#19)
 
 ### Removed
+- **Breaking Change:** Generic for Buzzer has been removed in favour of AnyPin (#19)
 
 ## 0.1.0 - 2024-08-21 - Initial release
