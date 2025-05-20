@@ -1,0 +1,13 @@
+{
+  "rust-analyzer.cargo.allTargets": false,
+  "[rust]": {
+    "editor.formatOnSave": true,
+  },
+  "rust-analyzer.linkedProjects": [
+    "esp-hal-buzzer/Cargo.toml",
+    "esp-hal-smartled/Cargo.toml"
+  ],
+  // helps remove rust-analyser errors due to requiring a feature flag and target
+  "rust-analyzer.cargo.features": ["esp32c3"], 
+  "rust-analyzer.cargo.target": "riscv32imc-unknown-none-elf",
+}
