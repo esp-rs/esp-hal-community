@@ -12,18 +12,17 @@ features = ["esp32c3"]
 targets  = ["riscv32imc-unknown-none-elf"]
 
 [dependencies]
-defmt             = { version = "0.3.8", optional = true }
-document-features = "0.2.10"
-esp-hal           = "0.23.1"
-fugit             = "0.3.7"
+defmt             = { version = "0.3.10", optional = true }
+document-features = "0.2.11"
+esp-hal           = { version = "1.0.0-beta.0", features = ["unstable"] }
 
 [dev-dependencies]
-esp-backtrace = { version = "0.15.0", features = [
+esp-backtrace = { version = "0.15.1", features = [
   "exception-handler",
   "panic-handler",
   "println",
 ] }
-esp-println = "0.13.0"
+esp-println = "0.13.1"
 
 [features]
 ## Implement `defmt::Format` on certain types.
