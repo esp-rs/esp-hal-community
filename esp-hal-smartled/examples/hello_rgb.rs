@@ -41,10 +41,9 @@ fn main() -> ! {
     // Initialize the HAL Peripherals
     let p = esp_hal::init(esp_hal::Config::default());
 
-    // Each devkit uses a unique GPIO for the RGB LED, so in order to support
-    // all chips we must unfortunately use `#[cfg]`s:
-    let mut led: SmartLedsAdapter<_, 25> = {
-        // Configure RMT peripheral globally
+    // Configure RMT (Remote Control Transceiver) peripheral globally
+    // <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/rmt.html>
+    let rmt: Rmt<'_, esp_hal::Blocking> = {
         let frequency: Rate = {
             cfg_if::cfg_if! {
                 if #[cfg(feature = "esp32h2")] {
@@ -54,12 +53,18 @@ fn main() -> ! {
                 }
             }
         };
-        // We use one of the RMT channels to instantiate a `SmartLedsAdapter` which can
-        // be used directly with all `smart_led` implementations
-        let rmt_channel = Rmt::new(p.RMT, frequency)
-            .expect("Failed to initialize RMT0")
-            .channel0;
-        let rmt_buffer = smartLedBuffer!(1);
+        Rmt::new(p.RMT, frequency)
+    }
+    .expect("Failed to initialize RMT");
+
+    // We use one of the RMT channels to instantiate a `SmartLedsAdapter` which can
+    // be used directly with all `smart_led` implementations
+    let rmt_channel = rmt.channel0;
+    let rmt_buffer = smartLedBuffer!(1);
+
+    // Each devkit uses a unique GPIO for the RGB LED, so in order to support
+    // all chips we must unfortunately use `#[cfg]`s:
+    let mut led: SmartLedsAdapter<_, 25> = {
         cfg_if::cfg_if! {
             if #[cfg(feature = "esp32")] {
                 SmartLedsAdapter::new(rmt_channel, p.GPIO33, rmt_buffer)
