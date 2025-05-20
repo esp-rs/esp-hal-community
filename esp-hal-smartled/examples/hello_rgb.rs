@@ -83,6 +83,7 @@ fn main() -> ! {
         val: 255,
     };
     let mut data: RGB8;
+    let level = 10;
 
     loop {
         // Iterate over the rainbow!
@@ -91,10 +92,11 @@ fn main() -> ! {
             // Convert from the HSV color space (where we can easily transition from one
             // color to the other) to the RGB color space that we can then send to the LED
             data = hsv2rgb(color);
-            // When sending to the LED, we do a gamma correction first (see smart_leds
-            // documentation for details) and then limit the brightness to 10 out of 255 so
-            // that the output it's not too bright.
-            led.write(brightness(gamma([data].into_iter()), 10))
+            // When sending to the LED, we do a gamma correction first (see smart_leds docs
+            // for details <https://docs.rs/smart-leds/latest/smart_leds/struct.Gamma.html>)
+            // and then limit the brightness level to 10 out of 255 so that the output
+            // is not too bright.
+            led.write(brightness(gamma([data].into_iter()), level))
                 .unwrap();
             delay.delay_millis(20);
         }
