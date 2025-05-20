@@ -31,20 +31,20 @@
 #![deny(missing_docs)]
 #![no_std]
 
-use core::{fmt::Debug, ops::DerefMut};
+use core::fmt::Debug;
 
 use esp_hal::{
     clock::Clocks,
     delay::Delay,
-    gpio::{AnyPin, Level, Output, OutputPin, Pin},
+    gpio::{AnyPin, Level, Output, OutputConfig, OutputPin},
     ledc::{
         channel::{self, Channel, ChannelIFace},
         timer::{self, Timer, TimerIFace},
         Ledc, LowSpeed,
     },
-    peripheral::{Peripheral, PeripheralRef},
+    peripheral::Peripheral,
+    time::Rate,
 };
-use fugit::RateExtU32;
 
 pub mod notes;
 
@@ -124,27 +124,27 @@ struct Volume {
 }
 
 /// A buzzer instance driven by Ledc
-pub struct Buzzer<'a, O: OutputPin> {
+pub struct Buzzer<'a> {
     timer: Timer<'a, LowSpeed>,
     channel_number: channel::Number,
-    output_pin: PeripheralRef<'a, O>,
+    output_pin: AnyPin,
     delay: Delay,
     volume: Option<Volume>,
 }
 
-impl<'a, O: OutputPin + Peripheral<P = O>> Buzzer<'a, O> {
+impl<'a> Buzzer<'a> {
     /// Create a new buzzer for the given pin
-    pub fn new(
+    pub fn new<O>(
         ledc: &'a Ledc,
         timer_number: timer::Number,
         channel_number: channel::Number,
-        output_pin: impl Peripheral<P = O> + 'a,
+        output_pin: impl Peripheral<P = O> + OutputPin + 'a,
     ) -> Self {
         let timer = ledc.timer(timer_number);
         Self {
             timer,
             channel_number,
-            output_pin: output_pin.into_ref(),
+            output_pin: output_pin.degrade(),
             delay: Delay::new(),
             volume: None::<Volume>,
         }
@@ -153,7 +153,7 @@ impl<'a, O: OutputPin + Peripheral<P = O>> Buzzer<'a, O> {
     /// Add a volume control for the buzzer.
     pub fn with_volume<V>(
         mut self,
-        volume_pin: impl Peripheral<P = V> + Pin + 'a,
+        volume_pin: impl Peripheral<P = V> + OutputPin + 'a,
         volume_type: VolumeType,
     ) -> Self {
         self.volume = Some(Volume {
@@ -178,6 +178,7 @@ impl<'a, O: OutputPin + Peripheral<P = O>> Buzzer<'a, O> {
                     Output::new(
                         unsafe { volume.volume_pin.clone_unchecked() },
                         if level != 0 { Level::High } else { Level::Low },
+                        OutputConfig::default(),
                     );
                     Ok(())
                 }
@@ -191,7 +192,7 @@ impl<'a, O: OutputPin + Peripheral<P = O>> Buzzer<'a, O> {
                                 self.timer.configure(timer::config::Config {
                                     duty: timer::config::Duty::Duty11Bit,
                                     clock_source: timer::LSClockSource::APBClk,
-                                    frequency: 20_000.Hz(),
+                                    frequency: Rate::from_hz(20_000),
                                 })?;
                             }
 
@@ -211,6 +212,7 @@ impl<'a, O: OutputPin + Peripheral<P = O>> Buzzer<'a, O> {
                             Output::new(
                                 unsafe { volume.volume_pin.clone_unchecked() },
                                 Level::High,
+                                OutputConfig::default(),
                             );
                             Ok(())
                         }
@@ -227,7 +229,9 @@ impl<'a, O: OutputPin + Peripheral<P = O>> Buzzer<'a, O> {
     ///
     /// The muting is done by simply setting the duty to 0
     pub fn mute(&mut self) -> Result<(), Error> {
-        let mut channel = Channel::new(self.channel_number, self.output_pin.deref_mut());
+        let mut channel = Channel::new(self.channel_number, unsafe {
+            self.output_pin.clone_unchecked()
+        });
         channel
             .configure(channel::config::Config {
                 timer: &self.timer,
@@ -247,7 +251,7 @@ impl<'a, O: OutputPin + Peripheral<P = O>> Buzzer<'a, O> {
         // Max duty resolution for a frequency:
         // Integer(log2(LEDC_APB_CKL / frequency))
         let mut result = 0;
-        let mut value = (Clocks::get().apb_clock / frequency).raw();
+        let mut value = Clocks::get().apb_clock / Rate::from_hz(frequency);
 
         // Limit duty resolution to 14 bits
         while value > 1 && result < 14 {
@@ -259,10 +263,12 @@ impl<'a, O: OutputPin + Peripheral<P = O>> Buzzer<'a, O> {
             // Safety: This should never fail because resolution is limited to 14 bits
             duty: timer::config::Duty::try_from(result).unwrap(),
             clock_source: timer::LSClockSource::APBClk,
-            frequency: frequency.Hz(),
+            frequency: Rate::from_hz(frequency),
         })?;
 
-        let mut channel = Channel::new(self.channel_number, self.output_pin.deref_mut());
+        let mut channel = Channel::new(self.channel_number, unsafe {
+            self.output_pin.clone_unchecked()
+        });
         channel.configure(channel::config::Config {
             timer: &self.timer,
             // Use volume as duty if set since we use the same channel.
