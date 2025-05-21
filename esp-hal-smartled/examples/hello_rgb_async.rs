@@ -96,7 +96,7 @@ async fn main(_spawner: Spawner) -> ! {
             data = hsv2rgb(color);
             // When sending to the LED, we do a gamma correction first (see smart_leds
             // documentation for details) and then limit the brightness to 10 out of 255 so
-            // that the output it's not too bright.
+            // that the output is not too bright.
             led.write(brightness(gamma([data].into_iter()), level))
                 .await
                 .unwrap();
