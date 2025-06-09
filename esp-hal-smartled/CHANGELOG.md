@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- New `SmartLedsAdapterAsync` which is an asynchronous, non-blocking version of the driver.
+- New `SmartLedsAdapterAsync` which is an asynchronous, non-blocking version of the driver. (#6)
+- Updated to use `esp-hal-beta.1`, see [migration guide](https://github.com/esp-rs/esp-hal/releases/tag/esp-hal-v1.0.0-beta.1) for details. (#31)
 
 ## 0.14.0
 
