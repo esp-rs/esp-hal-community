@@ -42,7 +42,6 @@ use esp_hal::{
         timer::{self, Timer, TimerIFace},
         Ledc, LowSpeed,
     },
-    peripheral::Peripheral,
     time::Rate,
 };
 
@@ -109,9 +108,9 @@ pub enum VolumeType {
 }
 
 /// Volume configuration for the buzzer
-struct Volume {
+struct Volume<'d> {
     /// Output pin for the volume
-    volume_pin: AnyPin,
+    volume_pin: AnyPin<'d>,
 
     /// Type of the volume
     volume_type: VolumeType,
@@ -127,18 +126,18 @@ struct Volume {
 pub struct Buzzer<'a> {
     timer: Timer<'a, LowSpeed>,
     channel_number: channel::Number,
-    output_pin: AnyPin,
+    output_pin: AnyPin<'a>,
     delay: Delay,
-    volume: Option<Volume>,
+    volume: Option<Volume<'a>>,
 }
 
 impl<'a> Buzzer<'a> {
     /// Create a new buzzer for the given pin
-    pub fn new<O>(
+    pub fn new(
         ledc: &'a Ledc,
         timer_number: timer::Number,
         channel_number: channel::Number,
-        output_pin: impl Peripheral<P = O> + OutputPin + 'a,
+        output_pin: impl OutputPin + 'a,
     ) -> Self {
         let timer = ledc.timer(timer_number);
         Self {
@@ -151,11 +150,7 @@ impl<'a> Buzzer<'a> {
     }
 
     /// Add a volume control for the buzzer.
-    pub fn with_volume<V>(
-        mut self,
-        volume_pin: impl Peripheral<P = V> + OutputPin + 'a,
-        volume_type: VolumeType,
-    ) -> Self {
+    pub fn with_volume(mut self, volume_pin: impl OutputPin + 'a, volume_type: VolumeType) -> Self {
         self.volume = Some(Volume {
             volume_pin: volume_pin.degrade(),
             volume_type,

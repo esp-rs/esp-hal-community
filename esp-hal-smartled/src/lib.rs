@@ -43,8 +43,7 @@ use core::{fmt::Debug, slice::IterMut};
 
 use esp_hal::{
     clock::Clocks,
-    gpio::{Level, interconnect::PeripheralOutput},
-    peripheral::Peripheral,
+    gpio::{interconnect::PeripheralOutput, Level},
     rmt::{
         Error as RmtError, PulseCode, TxChannel, TxChannelAsync, TxChannelConfig, TxChannelCreator,
         TxChannelCreatorAsync,
@@ -180,12 +179,12 @@ where
     /// Create a new adapter object that drives the pin using the RMT channel.
     pub fn new<C, O>(
         channel: C,
-        pin: impl Peripheral<P=O> + 'd,
+        pin: O,
         rmt_buffer: [u32; BUFFER_SIZE],
     ) -> SmartLedsAdapter<TX, BUFFER_SIZE>
     where
-        O: PeripheralOutput,
-        C: TxChannelCreator<'d, TX, O>,
+        O: PeripheralOutput<'d>,
+        C: TxChannelCreator<'d, TX>,
     {
         let channel = channel.configure(pin, led_config()).unwrap();
 
@@ -244,7 +243,7 @@ where
 }
 
 /// Support for asynchronous and non-blocking use of the RMT peripheral to drive smart LEDs.
-
+///
 /// Function to calculate the required RMT buffer size for a given number of LEDs when using
 /// the asynchronous API. This buffer size is calculated for the asynchronous API provided by the
 /// [SmartLedsAdapterAsync]. [buffer_size] should be used for the synchronous API.
@@ -265,12 +264,12 @@ impl<'d, Tx: TxChannelAsync, const BUFFER_SIZE: usize> SmartLedsAdapterAsync<Tx,
     /// Create a new adapter object that drives the pin using the RMT channel.
     pub fn new<C, O>(
         channel: C,
-        pin: impl Peripheral<P=O> + 'd,
+        pin: O,
         rmt_buffer: [u32; BUFFER_SIZE],
     ) -> SmartLedsAdapterAsync<Tx, BUFFER_SIZE>
     where
-        O: PeripheralOutput,
-        C: TxChannelCreatorAsync<'d, Tx, O>,
+        O: PeripheralOutput<'d>,
+        C: TxChannelCreatorAsync<'d, Tx>,
     {
         let channel = channel.configure(pin, led_config()).unwrap();
 
