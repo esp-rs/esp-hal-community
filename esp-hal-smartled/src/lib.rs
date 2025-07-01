@@ -45,9 +45,10 @@ use esp_hal::{
     clock::Clocks,
     gpio::{interconnect::PeripheralOutput, Level},
     rmt::{
-        Error as RmtError, PulseCode, TxChannel, TxChannelAsync, TxChannelConfig, TxChannelCreator,
-        TxChannelCreatorAsync,
+        Channel, Error as RmtError, PulseCode, RawChannelAccess, TxChannel, TxChannelAsync,
+        TxChannelConfig, TxChannelCreator, TxChannelInternal,
     },
+    Async, Blocking,
 };
 use smart_leds_trait::{SmartLedsWrite, SmartLedsWriteAsync, RGB8};
 
@@ -165,16 +166,16 @@ macro_rules! smartLedBuffer {
 /// interaction functionality using the `smart-leds` crate
 pub struct SmartLedsAdapter<TX, const BUFFER_SIZE: usize>
 where
-    TX: TxChannel,
+    TX: RawChannelAccess + TxChannelInternal + 'static,
 {
-    channel: Option<TX>,
+    channel: Option<Channel<Blocking, TX>>,
     rmt_buffer: [u32; BUFFER_SIZE],
     pulses: (u32, u32),
 }
 
 impl<'d, TX, const BUFFER_SIZE: usize> SmartLedsAdapter<TX, BUFFER_SIZE>
 where
-    TX: TxChannel,
+    TX: RawChannelAccess + TxChannelInternal + 'static,
 {
     /// Create a new adapter object that drives the pin using the RMT channel.
     pub fn new<C, O>(
@@ -184,9 +185,9 @@ where
     ) -> SmartLedsAdapter<TX, BUFFER_SIZE>
     where
         O: PeripheralOutput<'d>,
-        C: TxChannelCreator<'d, TX>,
+        C: TxChannelCreator<'d, Blocking, Raw = TX>,
     {
-        let channel = channel.configure(pin, led_config()).unwrap();
+        let channel = channel.configure_tx(pin, led_config()).unwrap();
 
         // Assume the RMT peripheral is set up to use the APB clock
         let src_clock = Clocks::get().apb_clock.as_mhz();
@@ -201,7 +202,7 @@ where
 
 impl<TX, const BUFFER_SIZE: usize> SmartLedsWrite for SmartLedsAdapter<TX, BUFFER_SIZE>
 where
-    TX: TxChannel,
+    TX: RawChannelAccess + TxChannelInternal + 'static,
 {
     type Error = LedAdapterError;
     type Color = RGB8;
@@ -254,13 +255,19 @@ pub const fn buffer_size_async(num_leds: usize) -> usize {
 
 /// Adapter taking an RMT channel and a specific pin and providing RGB LED
 /// interaction functionality.
-pub struct SmartLedsAdapterAsync<Tx, const BUFFER_SIZE: usize> {
-    channel: Tx,
+pub struct SmartLedsAdapterAsync<Tx, const BUFFER_SIZE: usize>
+where
+    Tx: RawChannelAccess + TxChannelInternal + 'static,
+{
+    channel: Channel<Async, Tx>,
     rmt_buffer: [u32; BUFFER_SIZE],
     pulses: (u32, u32),
 }
 
-impl<'d, Tx: TxChannelAsync, const BUFFER_SIZE: usize> SmartLedsAdapterAsync<Tx, BUFFER_SIZE> {
+impl<'d, Tx, const BUFFER_SIZE: usize> SmartLedsAdapterAsync<Tx, BUFFER_SIZE>
+where
+    Tx: RawChannelAccess + TxChannelInternal + 'static,
+{
     /// Create a new adapter object that drives the pin using the RMT channel.
     pub fn new<C, O>(
         channel: C,
@@ -269,9 +276,9 @@ impl<'d, Tx: TxChannelAsync, const BUFFER_SIZE: usize> SmartLedsAdapterAsync<Tx,
     ) -> SmartLedsAdapterAsync<Tx, BUFFER_SIZE>
     where
         O: PeripheralOutput<'d>,
-        C: TxChannelCreatorAsync<'d, Tx>,
+        C: TxChannelCreator<'d, Async, Raw = Tx>,
     {
-        let channel = channel.configure(pin, led_config()).unwrap();
+        let channel = channel.configure_tx(pin, led_config()).unwrap();
 
         // Assume the RMT peripheral is set up to use the APB clock
         let src_clock = Clocks::get().apb_clock.as_mhz();
@@ -312,8 +319,9 @@ impl<'d, Tx: TxChannelAsync, const BUFFER_SIZE: usize> SmartLedsAdapterAsync<Tx,
     }
 }
 
-impl<Tx: TxChannelAsync, const BUFFER_SIZE: usize> SmartLedsWriteAsync
-    for SmartLedsAdapterAsync<Tx, BUFFER_SIZE>
+impl<Tx, const BUFFER_SIZE: usize> SmartLedsWriteAsync for SmartLedsAdapterAsync<Tx, BUFFER_SIZE>
+where
+    Tx: RawChannelAccess + TxChannelInternal + 'static,
 {
     type Error = LedAdapterError;
     type Color = RGB8;
