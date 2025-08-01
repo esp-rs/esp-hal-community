@@ -20,11 +20,11 @@ runs:
       shell: bash
       run: |
         cd ${{ inputs.package }}
-        cargo check --features=${{ inputs.soc }} --target=${{ inputs.target }} --examples
+        cargo check --features="${{ inputs.soc }},esp-hal/unstable" --target=${{ inputs.target }} --examples
 
     # Build the package (Xtensa):
     - if: ${{ startsWith(inputs.target, 'xtensa') }}
       shell: bash
       run: |
         cd ${{ inputs.package }}
-        cargo check -Zbuild-std=core --features=${{ inputs.soc }} --target=${{ inputs.target }} --examples
+        cargo check -Zbuild-std=core --features="${{ inputs.soc }},,esp-hal/unstable" --target=${{ inputs.target }} --examples

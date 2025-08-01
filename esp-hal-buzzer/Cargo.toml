@@ -14,7 +14,7 @@ targets  = ["riscv32imc-unknown-none-elf"]
 [dependencies]
 defmt             = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
-esp-hal           = { version = "1.0.0-rc.0", features = ["requires-unstable"] }
+esp-hal           = { version = "1.0.0-rc.0"}
 
 [dev-dependencies]
 esp-backtrace = { version = "0.17.0", features = [
@@ -27,8 +27,6 @@ esp-println = "0.15.0"
 [features]
 ## Implement `defmt::Format` on certain types.
 defmt = ["dep:defmt", "esp-hal/defmt"]
-unstable = ["esp-hal/unstable"]
-
 #! ### Chip Support Feature Flags
 ## Target the ESP32.
 esp32 = ["esp-backtrace/esp32", "esp-hal/esp32", "esp-println/esp32"]
