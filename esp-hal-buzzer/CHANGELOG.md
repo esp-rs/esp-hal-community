@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+- **Breaking Change:** `Buzzer::mute()` is now infallible (#38)
 
 ### Fixed
 - Upgrade esp-hal to 1.0.0-beta.1 (#31)
