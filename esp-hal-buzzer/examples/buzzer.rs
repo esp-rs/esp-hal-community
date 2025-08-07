@@ -28,20 +28,20 @@ fn main() -> ! {
         peripherals.GPIO6,
     );
 
-    buzzer.play_song(DOOM).unwrap();
-    buzzer.play_song(FURELISE).unwrap();
-    buzzer.play_song(MERRY_CHRISTMAS).unwrap();
-    buzzer.play_song(MII_CHANNEL).unwrap();
-    buzzer.play_song(NEVER_GONNA_GIVE_YOU_UP).unwrap();
-    buzzer.play_song(ODE_TO_JOY).unwrap();
-    buzzer.play_song(PACMAN).unwrap();
-    buzzer.play_song(STAR_WARS).unwrap();
-    buzzer.play_song(SUPER_MARIO_BROS).unwrap();
-    buzzer.play_song(TAKE_ON_ME).unwrap();
-    buzzer.play_song(TETRIS).unwrap();
-    buzzer.play_song(THE_LION_SLEEPS_TONIGHT).unwrap();
-    buzzer.play_song(ZELDA_LULLABY).unwrap();
-    buzzer.play_song(ZELDA_THEME).unwrap();
+    buzzer.play_song(&DOOM).unwrap();
+    buzzer.play_song(&FURELISE).unwrap();
+    buzzer.play_song(&MERRY_CHRISTMAS).unwrap();
+    buzzer.play_song(&MII_CHANNEL).unwrap();
+    buzzer.play_song(&NEVER_GONNA_GIVE_YOU_UP).unwrap();
+    buzzer.play_song(&ODE_TO_JOY).unwrap();
+    buzzer.play_song(&PACMAN).unwrap();
+    buzzer.play_song(&STAR_WARS).unwrap();
+    buzzer.play_song(&SUPER_MARIO_BROS).unwrap();
+    buzzer.play_song(&TAKE_ON_ME).unwrap();
+    buzzer.play_song(&TETRIS).unwrap();
+    buzzer.play_song(&THE_LION_SLEEPS_TONIGHT).unwrap();
+    buzzer.play_song(&ZELDA_LULLABY).unwrap();
+    buzzer.play_song(&ZELDA_THEME).unwrap();
 
     println!("Done");
 
