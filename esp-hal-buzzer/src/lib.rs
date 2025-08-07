@@ -8,17 +8,16 @@
 //! ## Example
 //!
 //! ```rust,ignore
-//! let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
+//! let peripherals = esp_hal::init(esp_hal::Config::default());
 //!
-//! let mut ledc = Ledc::new(peripherals.LEDC, &clocks);
+//! let mut ledc = Ledc::new(peripherals.LEDC);
 //! ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
 //!
 //! let mut buzzer = Buzzer::new(
 //!     &ledc,
 //!     timer::Number::Timer0,
 //!     channel::Number::Channel1,
-//!     io.pins.gpio6,
-//!     &clocks,
+//!     peripherals.GPIO6,
 //! );
 //!
 //! // Play a 1000Hz frequency
@@ -223,24 +222,33 @@ impl<'a> Buzzer<'a> {
     /// Mute the buzzer
     ///
     /// The muting is done by simply setting the duty to 0
-    pub fn mute(&mut self) -> Result<(), Error> {
+    pub fn mute(&self) {
+        // Timer is not configured, we do an early return since no sound is playing anyway.
+        if !self.timer.is_configured() {
+            return;
+        }
         let mut channel = Channel::new(self.channel_number, unsafe {
             self.output_pin.clone_unchecked()
         });
+        // Safety:
+        // - Error::Duty cannot happen, we hardcode 0 which is valid
+        // - Error::Channel cannot happen, channel is configured below
+        // - Error::Timer cannot happen, it's an early return no-op above
         channel
             .configure(channel::config::Config {
                 timer: &self.timer,
                 duty_pct: 0,
                 pin_config: channel::config::PinConfig::PushPull,
             })
-            .map_err(|e| e.into())
+            .unwrap()
     }
 
     /// Play a frequency through the buzzer
     pub fn play(&mut self, frequency: u32) -> Result<(), Error> {
         // Mute if frequency is 0Hz
         if frequency == 0 {
-            return self.mute();
+            self.mute();
+            return Ok(());
         }
 
         // Max duty resolution for a frequency:
@@ -310,10 +318,11 @@ impl<'a> Buzzer<'a> {
         for (frequency, timing) in sequence.iter().zip(timings.iter()) {
             self.play(*frequency)?;
             self.delay.delay_millis(*timing);
-            self.mute()?;
+            self.mute();
         }
         // Mute at the end of the sequence
-        self.mute()
+        self.mute();
+        Ok(())
     }
 
     /// Play a tone sequence through the buzzer
