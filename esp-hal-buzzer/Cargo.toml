@@ -1,6 +1,6 @@
 [package]
 name = "esp-hal-buzzer"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.84.0"
 description  = "Buzzer driver for esp-hal"
@@ -14,20 +14,19 @@ targets  = ["riscv32imc-unknown-none-elf"]
 [dependencies]
 defmt             = { version = "1.0.1", optional = true }
 document-features = "0.2.11"
-esp-hal           = { version = "1.0.0-beta.1", features = ["unstable"] }
+esp-hal           = { version = "1.0.0-rc.0"}
 
 [dev-dependencies]
-esp-backtrace = { version = "0.16.0", features = [
+esp-backtrace = { version = "0.17.0", features = [
   "exception-handler",
   "panic-handler",
   "println",
 ] }
-esp-println = "0.14.0"
+esp-println = "0.15.0"
 
 [features]
 ## Implement `defmt::Format` on certain types.
 defmt = ["dep:defmt", "esp-hal/defmt"]
-
 #! ### Chip Support Feature Flags
 ## Target the ESP32.
 esp32 = ["esp-backtrace/esp32", "esp-hal/esp32", "esp-println/esp32"]
