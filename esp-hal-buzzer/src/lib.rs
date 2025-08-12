@@ -61,6 +61,9 @@ pub enum Error {
 
     /// When the volume level is out of range. Either too low or too high.
     VolumeOutOfRange,
+
+    /// Sequence and timings slice aren't of the same length
+    LengthMismatch,
 }
 
 /// Converts [channel::Error] into [self::Error]
@@ -325,6 +328,55 @@ impl<'a> Buzzer<'a> {
         Ok(())
     }
 
+    /// Play a sound sequence through the buzzer
+    ///
+    /// Uses a pair of frequency and duration slices to play a sound sequence.
+    /// Both slices must be of the same length, where each pair of `(frequency, duration)` defines one tone.
+    ///
+    /// # Arguments
+    /// * `sequence` - A slice of frequencies to play through the buzzer
+    /// * `timings` - A slice of durations in milliseconds for each frequency
+    ///
+    /// # Examples
+    /// Play a single beep at 300Hz for 1 second
+    /// ```
+    /// buzzer.play_tones_from_slice(&[300], &[1000]);
+    /// ```
+    ///
+    /// Play a sequence of 3 beeps with a break in between
+    /// ```
+    /// buzzer.play_tones_from_slice(&[200, 0, 200, 0, 200], &[200, 50, 200, 50, 200]);
+    /// ```
+    ///
+    /// Play a sequence of 3 beeps with the same duration
+    /// ```
+    /// buzzer.play_tones_from_slice(&[100, 200, 300], &[100; 3]);
+    /// ```
+    ///
+    /// # Errors
+    /// This function returns an [Error] in the following cases:
+    /// - If the `sequence` and `timings` slices have different lengths ([Error::LengthMismatch])
+    /// - If playing a frequency results in an error
+    pub fn play_tones_from_slice(
+        &mut self,
+        sequence: &[u32],
+        timings: &[u32],
+    ) -> Result<(), Error> {
+        if sequence.len() != timings.len() {
+            return Err(Error::LengthMismatch);
+        }
+
+        // Iterate for each frequency / timing pair
+        for (frequency, timing) in sequence.iter().zip(timings.iter()) {
+            self.play(*frequency)?;
+            self.delay.delay_millis(*timing);
+            self.mute();
+        }
+        // Mute at the end of the sequence
+        self.mute();
+        Ok(())
+    }
+
     /// Play a tone sequence through the buzzer
     ///
     /// Uses a pair of frequencies and timings to play a sound sequence.
@@ -349,19 +401,20 @@ impl<'a> Buzzer<'a> {
     ///         duration: 100,
     ///     },
     /// ];
-    /// buzzer.play_song(song);
+    /// buzzer.play_song(&song);
     /// ```
     ///
     /// # Errors
     /// This function returns an [Error] in case of an error.
     /// An error can occur when an invalid value is used as a tone
-    pub fn play_song<const T: usize>(&mut self, tones: [ToneValue; T]) -> Result<(), Error> {
-        let mut sequence: [u32; T] = [0; T];
-        let mut timings: [u32; T] = [0; T];
-        for (index, tone) in tones.iter().enumerate() {
-            sequence[index] = tone.frequency;
-            timings[index] = tone.duration;
+    pub fn play_song(&mut self, tones: &[ToneValue]) -> Result<(), Error> {
+        for tone in tones {
+            self.play(tone.frequency)?;
+            self.delay.delay_millis(tone.duration);
+            self.mute();
         }
-        self.play_tones(sequence, timings)
+        // Mute at the end of the sequence
+        self.mute();
+        Ok(())
     }
 }

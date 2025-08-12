@@ -9,8 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `Buzzer::play_tones_from_slice(&self, sequence: &[u32], timings: &[u32])` to allow tone playback using slices (#39)
+
 ### Changed
 - **Breaking Change:** `Buzzer::mute()` is now infallible (#38)
+- **Breaking Change:** `Buzzer::play_song()` now takes a `&[ToneValue]` slice instead of a fixed-size `[ToneValue; N]` array (#39)
 
 ### Fixed
 - Upgrade esp-hal to 1.0.0-beta.1 (#31)
