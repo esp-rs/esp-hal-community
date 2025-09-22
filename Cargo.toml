@@ -3,4 +3,4 @@ members = [
     "esp-hal-smartled",
     "esp-hal-buzzer",
 ]
-resolver = "2"
+resolver = "3"

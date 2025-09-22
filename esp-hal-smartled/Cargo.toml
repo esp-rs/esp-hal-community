@@ -1,8 +1,8 @@
 [package]
 name         = "esp-hal-smartled"
 version      = "0.16.0"
-edition      = "2021"
-rust-version = "1.84.0"
+edition      = "2024"
+rust-version = "1.88"
 description  = "RMT peripheral adapter for smart LEDs"
 repository   = "https://github.com/esp-rs/esp-hal-community"
 license      = "MIT OR Apache-2.0"
