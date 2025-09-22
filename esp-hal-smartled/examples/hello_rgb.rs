@@ -36,6 +36,8 @@ use smart_leds::{
     SmartLedsWrite, RGB8,
 };
 
+esp_bootloader_esp_idf::esp_app_desc!();
+
 #[main]
 fn main() -> ! {
     // Initialize the HAL Peripherals
