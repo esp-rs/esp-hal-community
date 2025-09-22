@@ -14,6 +14,8 @@ use esp_hal::{
 use esp_hal_buzzer::{notes::*, song, Buzzer, ToneValue};
 use esp_println::println;
 
+esp_bootloader_esp_idf::esp_app_desc!();
+
 #[main]
 fn main() -> ! {
     let peripherals = esp_hal::init(esp_hal::Config::default());

@@ -25,6 +25,7 @@ esp-backtrace = { version = "0.17.0", features = [
   "panic-handler",
   "println",
 ] }
+esp-bootloader-esp-idf = "0.1.0"
 esp-println = "0.15.0"
 
 [features]
