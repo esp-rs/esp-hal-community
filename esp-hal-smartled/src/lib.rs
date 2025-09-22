@@ -385,7 +385,7 @@ where
         mut_iter: &mut IterMut<u32>,
         pulses: (u32, u32),
     ) -> Result<(), LedAdapterError> {
-        for (index, v) in value.iter().enumerate() {
+        for v in value {
             convert_rgb_channel_to_pulses(*v, mut_iter, pulses)?;
         }
         *mut_iter.next().ok_or(LedAdapterError::BufferSizeExceeded)? = 0;
