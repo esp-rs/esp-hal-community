@@ -8,7 +8,7 @@ repository   = "https://github.com/esp-rs/esp-hal-community"
 license      = "MIT OR Apache-2.0"
 
 [package.metadata.docs.rs]
-features = ["esp32c3"]
+features = ["esp32c3", "esp-hal/unstable"]
 targets  = ["riscv32imc-unknown-none-elf"]
 
 [dependencies]

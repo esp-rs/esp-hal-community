@@ -25,12 +25,11 @@
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
-use esp_hal::{rmt::Rmt, time::Rate, timer::timg::TimerGroup, Config};
-use esp_hal_smartled::{buffer_size_async, SmartLedsAdapterAsync};
+use esp_hal::{Config, rmt::Rmt, time::Rate, timer::timg::TimerGroup};
+use esp_hal_smartled::{SmartLedsAdapterAsync, buffer_size_async};
 use smart_leds::{
-    brightness, gamma,
-    hsv::{hsv2rgb, Hsv},
-    SmartLedsWriteAsync, RGB8,
+    RGB8, SmartLedsWriteAsync, brightness, gamma,
+    hsv::{Hsv, hsv2rgb},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

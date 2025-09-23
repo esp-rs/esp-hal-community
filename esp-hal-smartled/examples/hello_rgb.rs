@@ -29,11 +29,10 @@
 
 use esp_backtrace as _;
 use esp_hal::{delay::Delay, main, rmt::Rmt, time::Rate};
-use esp_hal_smartled::{smart_led_buffer, SmartLedsAdapter};
+use esp_hal_smartled::{SmartLedsAdapter, smart_led_buffer};
 use smart_leds::{
-    brightness, gamma,
-    hsv::{hsv2rgb, Hsv},
-    SmartLedsWrite, RGB8,
+    RGB8, SmartLedsWrite, brightness, gamma,
+    hsv::{Hsv, hsv2rgb},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

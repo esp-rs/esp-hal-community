@@ -8,10 +8,10 @@
 
 use esp_backtrace as _;
 use esp_hal::{
-    ledc::{channel, timer, LSGlobalClkSource, Ledc},
+    ledc::{LSGlobalClkSource, Ledc, channel, timer},
     main,
 };
-use esp_hal_buzzer::{notes::*, song, Buzzer, ToneValue};
+use esp_hal_buzzer::{Buzzer, ToneValue, notes::*, song};
 use esp_println::println;
 
 esp_bootloader_esp_idf::esp_app_desc!();
