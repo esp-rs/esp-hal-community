@@ -1,10 +1,13 @@
 //! # Buzzer
 //!
 //! ## Overview
+//!
 //! This driver provides an abstraction over LEDC to drive a piezo-electric
 //! buzzer through a user-friendly API.
 //!
-//! The [songs] module contains pre-programmed songs to play through the buzzer.
+//! The [buzzer example](https://github.com/esp-rs/esp-hal-community/blob/main/esp-hal-buzzer/examples/buzzer.rs)
+//! contains pre-programmed songs to play through the buzzer.
+//!
 //! ## Example
 //!
 //! ```rust,ignore
@@ -37,9 +40,9 @@ use esp_hal::{
     delay::Delay,
     gpio::{AnyPin, Level, Output, OutputConfig, OutputPin},
     ledc::{
+        Ledc, LowSpeed,
         channel::{self, Channel, ChannelIFace},
         timer::{self, Timer, TimerIFace},
-        Ledc, LowSpeed,
     },
     time::Rate,
 };

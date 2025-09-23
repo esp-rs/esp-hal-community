@@ -19,7 +19,6 @@ concurrency:
 jobs:
   # --------------------------------------------------------------------------
   # Check
-
   check:
     runs-on: ubuntu-latest
 
@@ -49,7 +48,7 @@ jobs:
           target: ${{ matrix.device.target }}
       # Install the Rust toolchain for Xtensa devices:
       - if: ${{ startsWith(matrix.device.target, 'xtensa') }}
-        uses: esp-rs/xtensa-toolchain@v1.5
+        uses: esp-rs/xtensa-toolchain@v1.6
         with:
           default: true
           ldproxy: false
@@ -71,3 +70,55 @@ jobs:
           package: esp-hal-buzzer
           soc: ${{ matrix.device.soc }}
           target: ${{ matrix.device.target }}
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rust-src
+          target: riscv32imac-unknown-none-elf
+      - run: cargo +stable clippy --features "esp32c6,esp-hal/unstable" --target=riscv32imac-unknown-none-elf -- -D warnings
+
+  fmt:
+    name: Check formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo fmt --all -- --check
+
+  docs:
+    name: Check Documentation Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+          targets: "riscv32imac-unknown-none-elf"
+      - run: RUSTDOCFLAGS="--cfg docsrs -Z unstable-options" cargo +nightly doc --target=riscv32imac-unknown-none-elf --features "esp32c6,esp-hal/unstable"
+
+  msrv-smartled:
+    name: MSRV esp-hal-smartled
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88
+        with:
+          components: rust-src
+          targets: "riscv32imac-unknown-none-elf"
+      - run: cargo build -p esp-hal-smartled --features "esp32c6,esp-hal/unstable" --target=riscv32imac-unknown-none-elf
+
+  msrv-buzzer:
+    name: MSRV esp-hal-buzzer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88
+        with:
+          components: rust-src
+          targets: "riscv32imac-unknown-none-elf"
+      - run: cargo build -p esp-hal-buzzer --features "esp32c6,esp-hal/unstable" --target=riscv32imac-unknown-none-elf
