@@ -10,14 +10,20 @@ A collection of crates for use alongside [esp-hal], but which are maintained by 
 
 ## Examples
 
-To run the examples for either crate, either open the project at the sub-crate level or change directory:
-
+The following command can be used to run the smart LED example on a ESP32C6 target.
 ```bash
-# cd into crate directory for smartled or buzzer
-cd esp-hal-smartled
-# cargo <chip alias> --example <example name>
-cargo esp32c3 --example hello_rgb # or other chip
+cargo +stable run --example hello_rgb --features "esp32c6,esp-hal/unstable" --target=riscv32imac-unknown-none-elf --release
 ```
+
+This repository also provides a [`justfile`](https://github.com/casey/just) which provides
+`just run-esp32c6 hello_rgb` as a shorthand for the command above. There are also shorthands for
+running other examples and running on other chips. You can use `just --list` to list all provided
+shorthands.
+
+There are two sample toolchain files available for simplifying development:
+`rust-toolchain-risc-v.toml` and `rust-toolchain-xtensa.toml`. Depending on which target you develop
+for, you can use `cp rust-toolchain-risc-v.toml rust-toolchain.toml` or
+`cp rust-toolchain-xtensa.toml rust-toolchain.toml` to set the correct Rust toolchain.
 
 ## Contributing a Crate
 
