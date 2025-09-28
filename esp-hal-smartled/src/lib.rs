@@ -42,13 +42,13 @@
 use core::{fmt::Debug, marker::PhantomData, slice::IterMut};
 
 use esp_hal::{
+    Async, Blocking,
     clock::Clocks,
-    gpio::{interconnect::PeripheralOutput, Level},
+    gpio::{Level, interconnect::PeripheralOutput},
     rmt::{
         Channel, Error as RmtError, PulseCode, RawChannelAccess, TxChannel, TxChannelAsync,
         TxChannelConfig, TxChannelCreator, TxChannelInternal,
     },
-    Async, Blocking,
 };
 use rgb::Grb;
 use smart_leds_trait::{SmartLedsWrite, SmartLedsWriteAsync};
