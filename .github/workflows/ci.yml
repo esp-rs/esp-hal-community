@@ -78,7 +78,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rust-src
+          components: rust-src, clippy
           target: riscv32imac-unknown-none-elf
       - run: cargo +stable clippy --features "esp32c6,esp-hal/unstable" --target=riscv32imac-unknown-none-elf -- -D warnings
 
@@ -88,6 +88,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
       - run: cargo fmt --all -- --check
 
   docs:
