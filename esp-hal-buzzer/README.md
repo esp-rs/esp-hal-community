@@ -8,7 +8,7 @@
 
 Provides a driver to easily interact with piezo-electric buzzers for `esp-hal`. The crate uses the underlying Ledc driver and provides a user-friendly API.
 
-A few songs are included in the [songs](./src/songs.rs) module. Contributions are welcome.
+The [buzzer example](https://github.com/esp-rs/esp-hal-community/blob/main/esp-hal-buzzer/examples/buzzer.rs) contains pre-programmed songs to play through the buzzer.
 
 ## [Documentation]
 
