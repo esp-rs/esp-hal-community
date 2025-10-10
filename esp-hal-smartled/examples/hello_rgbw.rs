@@ -35,6 +35,8 @@ use smart_leds::{
     hsv::{Hsv, hsv2rgb},
 };
 
+esp_bootloader_esp_idf::esp_app_desc!();
+
 #[main]
 fn main() -> ! {
     // Initialize the HAL Peripherals

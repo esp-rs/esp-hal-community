@@ -2,7 +2,7 @@
 //! with RGB LEDs and use the convenience functions of the
 //! [`smart-leds`](https://crates.io/crates/smart-leds) crate.
 //!
-//! This is a simple implementation where every LED is adressed in an
+//! This is a simple implementation where every LED is addressed in an
 //! individual RMT operation. This is working perfectly fine in blocking mode,
 //! but in case this is used in combination with interrupts that might disturb
 //! the sequential sending, an alternative implementation (addressing the LEDs
