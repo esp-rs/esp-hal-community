@@ -57,3 +57,6 @@ msrv-buzzer:
   cargo msrv find --target riscv32imac-unknown-none-elf -- cargo check -p esp-hal-buzzer --features "esp32c6,esp-hal/unstable" --target riscv32imac-unknown-none-elf
 msrv-smartled:
   cargo msrv find --target riscv32imac-unknown-none-elf -- cargo check -p esp-hal-smartled --features "esp32c6,esp-hal/unstable" --target riscv32imac-unknown-none-elf
+
+docs:
+  RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --features "esp32c6, esp-hal/unstable" --target riscv32imac-unknown-none-elf
