@@ -17,7 +17,7 @@ document-features = "0.2.11"
 # Unstable required for:
 # - ledc
 # - delay
-esp-hal           = { version = "1.0.0-rc.0", features = ["requires-unstable"] }
+esp-hal           = { version = "1.0.0-rc.1", features = ["unstable"] }
 
 [dev-dependencies]
 esp-backtrace = { version = "0.17.0", features = [
