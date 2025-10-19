@@ -20,7 +20,7 @@
 //!     &ledc,
 //!     timer::Number::Timer0,
 //!     channel::Number::Channel1,
-//!     peripherals.GPIO6,
+//!     peripherals.GPIO0,
 //! );
 //!
 //! // Play a 1000Hz frequency
@@ -38,7 +38,7 @@ use core::fmt::Debug;
 use esp_hal::{
     clock::Clocks,
     delay::Delay,
-    gpio::{AnyPin, Level, Output, OutputConfig, OutputPin},
+    gpio::{AnyPin, DriveMode, Level, Output, OutputConfig, OutputPin},
     ledc::{
         Ledc, LowSpeed,
         channel::{self, Channel, ChannelIFace},
@@ -203,7 +203,7 @@ impl<'a> Buzzer<'a> {
                                 .configure(channel::config::Config {
                                     timer: &self.timer,
                                     duty_pct: level,
-                                    pin_config: channel::config::PinConfig::PushPull,
+                                    drive_mode: DriveMode::PushPull,
                                 })
                                 .map_err(|e| e.into())
                         }
@@ -244,7 +244,7 @@ impl<'a> Buzzer<'a> {
             .configure(channel::config::Config {
                 timer: &self.timer,
                 duty_pct: 0,
-                pin_config: channel::config::PinConfig::PushPull,
+                drive_mode: DriveMode::PushPull,
             })
             .unwrap()
     }
@@ -282,7 +282,7 @@ impl<'a> Buzzer<'a> {
             timer: &self.timer,
             // Use volume as duty if set since we use the same channel.
             duty_pct: self.volume.as_ref().map_or(50, |v| v.level),
-            pin_config: channel::config::PinConfig::PushPull,
+            drive_mode: DriveMode::PushPull,
         })?;
 
         Ok(())

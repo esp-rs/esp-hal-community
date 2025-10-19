@@ -17,32 +17,31 @@ document-features = "0.2.11"
 # Unstable required for:
 # - ledc
 # - delay
-esp-hal           = { version = "1.0.0-rc.0", features = ["requires-unstable"] }
+esp-hal           = { version = "1.0.0-rc.1", features = ["unstable"] }
 
 [dev-dependencies]
-esp-backtrace = { version = "0.17.0", features = [
-  "exception-handler",
+esp-backtrace = { version = "0.18.0", features = [
   "panic-handler",
   "println",
 ] }
-esp-bootloader-esp-idf = "0.1.0"
-esp-println = "0.15.0"
+esp-bootloader-esp-idf = "0.3.0"
+esp-println = "0.16.0"
 
 [features]
 ## Implement `defmt::Format` on certain types.
 defmt = ["dep:defmt", "esp-hal/defmt"]
 #! ### Chip Support Feature Flags
 ## Target the ESP32.
-esp32 = ["esp-backtrace/esp32", "esp-hal/esp32", "esp-println/esp32"]
+esp32 = ["esp-backtrace/esp32", "esp-hal/esp32", "esp-println/esp32", "esp-bootloader-esp-idf/esp32"]
 ## Target the ESP32-C2.
-esp32c2 = ["esp-backtrace/esp32c2", "esp-hal/esp32c2", "esp-println/esp32c2"]
+esp32c2 = ["esp-backtrace/esp32c2", "esp-hal/esp32c2", "esp-println/esp32c2", "esp-bootloader-esp-idf/esp32c2"]
 ## Target the ESP32-C3.
-esp32c3 = ["esp-backtrace/esp32c3", "esp-hal/esp32c3", "esp-println/esp32c3"]
+esp32c3 = ["esp-backtrace/esp32c3", "esp-hal/esp32c3", "esp-println/esp32c3", "esp-bootloader-esp-idf/esp32c3"]
 ## Target the ESP32-C6.
-esp32c6 = ["esp-backtrace/esp32c6", "esp-hal/esp32c6", "esp-println/esp32c6"]
+esp32c6 = ["esp-backtrace/esp32c6", "esp-hal/esp32c6", "esp-println/esp32c6", "esp-bootloader-esp-idf/esp32c6"]
 ## Target the ESP32-H2.
-esp32h2 = ["esp-backtrace/esp32h2", "esp-hal/esp32h2", "esp-println/esp32h2"]
+esp32h2 = ["esp-backtrace/esp32h2", "esp-hal/esp32h2", "esp-println/esp32h2", "esp-bootloader-esp-idf/esp32h2"]
 ## Target the ESP32-S2.
-esp32s2 = ["esp-backtrace/esp32s2", "esp-hal/esp32s2", "esp-println/esp32s2"]
+esp32s2 = ["esp-backtrace/esp32s2", "esp-hal/esp32s2", "esp-println/esp32s2", "esp-bootloader-esp-idf/esp32s2"]
 ## Target the ESP32-S3.
-esp32s3 = ["esp-backtrace/esp32s3", "esp-hal/esp32s3", "esp-println/esp32s3"]
+esp32s3 = ["esp-backtrace/esp32s3", "esp-hal/esp32s3", "esp-println/esp32s3", "esp-bootloader-esp-idf/esp32s3"]
