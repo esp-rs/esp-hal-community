@@ -1,7 +1,7 @@
-//! Play songs through a piezo-electric buzzer plugged on GPIO0.
+//! Play songs through a piezo-electric buzzer plugged on GPIO4.
 //!
 //! This assumes that a piezo-electric buzzer is connected to the pin assigned
-//! to `buzzer`. (GPIO0)
+//! to `buzzer`. (GPIO4)
 
 #![no_std]
 #![no_main]
@@ -27,7 +27,7 @@ fn main() -> ! {
         &ledc,
         timer::Number::Timer0,
         channel::Number::Channel1,
-        peripherals.GPIO0,
+        peripherals.GPIO4,
     );
 
     buzzer.play_song(&DOOM).unwrap();

@@ -20,7 +20,7 @@
 //!     &ledc,
 //!     timer::Number::Timer0,
 //!     channel::Number::Channel1,
-//!     peripherals.GPIO0,
+//!     peripherals.GPIO4,
 //! );
 //!
 //! // Play a 1000Hz frequency
