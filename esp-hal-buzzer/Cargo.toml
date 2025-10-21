@@ -12,20 +12,20 @@ features = ["esp32c3", "esp-hal/unstable"]
 targets  = ["riscv32imc-unknown-none-elf"]
 
 [dependencies]
-defmt             = { version = "1.0.1", optional = true }
-document-features = "0.2.11"
+defmt             = { version = "^1.0.1", optional = true }
+document-features = "^0.2.12"
 # Unstable required for:
 # - ledc
 # - delay
-esp-hal           = { version = "1.0.0-rc.1", features = ["unstable"] }
+esp-hal           = { version = "1.0.0-rc.1", features = ["requires-unstable"] }
 
 [dev-dependencies]
-esp-backtrace = { version = "0.18.0", features = [
+esp-backtrace = { version = "0.18", features = [
   "panic-handler",
   "println",
 ] }
-esp-bootloader-esp-idf = "0.3.0"
-esp-println = "0.16.0"
+esp-bootloader-esp-idf = "0.3"
+esp-println = "0.16"
 
 [features]
 ## Implement `defmt::Format` on certain types.
