@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.17.0
+
+### Changed
+
+- `esp-hal` version update: `v1.0.0-rc.0` -> `v1.0.0-rc.1`, see [migration guide](https://github.com/esp-rs/esp-hal/blob/main/esp-hal/MIGRATING-1.0.0-rc.0.md) for details.
+- Replaced `esp-hal-embassy` with `esp-rtos`.
+- Update `SmartLedsAdapter` and `SmartLedsAdapterAsync` generics according to the `esp-hal` version bump.
+
+## 0.16.0
+
 ## 0.15.0
 
 ### Added
