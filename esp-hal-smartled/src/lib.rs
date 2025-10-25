@@ -164,10 +164,10 @@ pub const fn buffer_size_rgbw(num_leds: usize) -> usize {
 #[macro_export]
 macro_rules! smart_led_buffer {
     ( $num_leds: expr ) => {
-        [::esp_hal::rmt::PulseCode::default(); $crate::buffer_size($num_leds)]
+        [::esp_hal::rmt::PulseCode::end_marker(); $crate::buffer_size($num_leds)]
     };
     ( $num_leds: expr; RGBW ) => {
-        [::esp_hal::rmt::PulseCode::default(); $crate::buffer_size_rgbw($num_leds)]
+        [::esp_hal::rmt::PulseCode::end_marker(); $crate::buffer_size_rgbw($num_leds)]
     };
 }
 
