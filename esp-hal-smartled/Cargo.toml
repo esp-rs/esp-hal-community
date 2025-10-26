@@ -1,6 +1,6 @@
 [package]
 name         = "esp-hal-smartled"
-version      = "0.16.0"
+version      = "0.17.0"
 edition      = "2024"
 rust-version = "1.88"
 description  = "RMT peripheral adapter for smart LEDs"
@@ -12,39 +12,40 @@ features = ["esp32c6", "esp-hal/unstable"]
 targets  = ["riscv32imac-unknown-none-elf"]
 
 [dependencies]
-defmt             = { version = "1.0.1", optional = true }
-document-features = "0.2.10"
-esp-hal           = { version = "1.0.0-rc.0", features = ["requires-unstable"] }
+defmt             = { version = "^1.0.1", optional = true }
+document-features = "^0.2.12"
+esp-hal           = { version = "1.0.0-rc.1", features = ["requires-unstable"] }
 rgb = "0.8.52"
-smart-leds-trait  = "0.3.1"
+smart-leds-trait  = "^0.3.2"
 
 [dev-dependencies]
-cfg-if = "1.0.0"
-esp-backtrace = { version = "0.17.0", features = [
-    "exception-handler",
+cfg-if = "1.0"
+esp-backtrace = { version = "0.18", features = [
     "panic-handler",
     "println",
 ] }
-esp-hal-embassy = "0.9.0"
-esp-bootloader-esp-idf = "0.2"
-embassy-executor = "0.7"
+esp-hal = { version = "1.0.0-rc.1", features = ["unstable"] }
+# Use esp-rtos for embassy support instead of esp-hal-embassy
+esp-rtos = { version = "^0.1.1", features = ["embassy"] }
+esp-bootloader-esp-idf = "0.3"
+embassy-executor = "0.9"
 embassy-time = "0.5"
-esp-println = "0.15.0"
-smart-leds = "0.4.0"
+esp-println = "0.16"
+smart-leds = "0.4"
 
 [features]
 ## Implement `defmt::Format` on certain types.
 defmt = ["dep:defmt", "esp-hal/defmt"]
 #! ### Chip Support Feature Flags
 ## Target the ESP32.
-esp32 = ["esp-backtrace/esp32", "esp-hal/esp32", "esp-println/esp32", "esp-hal-embassy/esp32", "esp-bootloader-esp-idf/esp32"]
+esp32 = ["esp-backtrace/esp32", "esp-hal/esp32", "esp-println/esp32", "esp-bootloader-esp-idf/esp32", "esp-rtos/esp32"]
 ## Target the ESP32-C3.
-esp32c3 = ["esp-backtrace/esp32c3", "esp-hal/esp32c3", "esp-println/esp32c3", "esp-hal-embassy/esp32c3", "esp-bootloader-esp-idf/esp32c3"]
+esp32c3 = ["esp-backtrace/esp32c3", "esp-hal/esp32c3", "esp-println/esp32c3", "esp-bootloader-esp-idf/esp32c3", "esp-rtos/esp32c3"]
 ## Target the ESP32-C6.
-esp32c6 = ["esp-backtrace/esp32c6", "esp-hal/esp32c6", "esp-println/esp32c6", "esp-hal-embassy/esp32c6", "esp-bootloader-esp-idf/esp32c6"]
+esp32c6 = ["esp-backtrace/esp32c6", "esp-hal/esp32c6", "esp-println/esp32c6", "esp-bootloader-esp-idf/esp32c6", "esp-rtos/esp32c6"]
 ## Target the ESP32-H2.
-esp32h2 = ["esp-backtrace/esp32h2", "esp-hal/esp32h2", "esp-println/esp32h2", "esp-hal-embassy/esp32h2", "esp-bootloader-esp-idf/esp32h2"]
+esp32h2 = ["esp-backtrace/esp32h2", "esp-hal/esp32h2", "esp-println/esp32h2", "esp-bootloader-esp-idf/esp32h2", "esp-rtos/esp32h2"]
 ## Target the ESP32-S2.
-esp32s2 = ["esp-backtrace/esp32s2", "esp-hal/esp32s2", "esp-println/esp32s2", "esp-hal-embassy/esp32s2", "esp-bootloader-esp-idf/esp32s2"]
+esp32s2 = ["esp-backtrace/esp32s2", "esp-hal/esp32s2", "esp-println/esp32s2", "esp-bootloader-esp-idf/esp32s2", "esp-rtos/esp32s2"]
 ## Target the ESP32-S3.
-esp32s3 = ["esp-backtrace/esp32s3", "esp-hal/esp32s3", "esp-println/esp32s3", "esp-hal-embassy/esp32s3", "esp-bootloader-esp-idf/esp32s3"]
+esp32s3 = ["esp-backtrace/esp32s3", "esp-hal/esp32s3", "esp-println/esp32s3", "esp-bootloader-esp-idf/esp32s3", "esp-rtos/esp32s3"]

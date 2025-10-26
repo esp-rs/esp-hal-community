@@ -34,12 +34,22 @@ use smart_leds::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[esp_hal_embassy::main]
+#[esp_rtos::main]
 async fn main(_spawner: Spawner) -> ! {
     // Initialize the HAL Peripherals
     let p = esp_hal::init(Config::default());
-    let timg0 = TimerGroup::new(p.TIMG0);
-    esp_hal_embassy::init(timg0.timer0);
+    #[cfg(target_arch = "riscv32")]
+    {
+        let timg0 = TimerGroup::new(p.TIMG0);
+        let sw_interrupt =
+            esp_hal::interrupt::software::SoftwareInterruptControl::new(p.SW_INTERRUPT);
+        esp_rtos::start(timg0.timer0, sw_interrupt.software_interrupt0);
+    }
+    #[cfg(target_arch = "xtensa")]
+    {
+        let timg0 = TimerGroup::new(p.TIMG0);
+        esp_rtos::start(timg0.timer0);
+    }
 
     // Configure RMT (Remote Control Transceiver) peripheral globally
     // <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/rmt.html>
@@ -61,11 +71,11 @@ async fn main(_spawner: Spawner) -> ! {
     // We use one of the RMT channels to instantiate a `SmartLedsAdapterAsync` which can
     // be used directly with all `smart_led` implementations
     let rmt_channel = rmt.channel0;
-    let rmt_buffer = [0_u32; buffer_size_async(1)];
+    let rmt_buffer = [esp_hal::rmt::PulseCode::default(); buffer_size_async(1)];
 
     // Each devkit uses a unique GPIO for the RGB LED, so in order to support
     // all chips we must unfortunately use `#[cfg]`s:
-    let mut led: SmartLedsAdapterAsync<_, 25> = {
+    let mut led = {
         cfg_if::cfg_if! {
             if #[cfg(feature = "esp32")] {
                 SmartLedsAdapterAsync::new(rmt_channel, p.GPIO33, rmt_buffer)

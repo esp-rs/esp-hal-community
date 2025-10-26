@@ -65,7 +65,7 @@ fn main() -> ! {
 
     // Each devkit uses a unique GPIO for the RGB LED, so in order to support
     // all chips we must unfortunately use `#[cfg]`s:
-    let mut led: SmartLedsAdapter<_, 25> = {
+    let mut led = {
         cfg_if::cfg_if! {
             if #[cfg(feature = "esp32")] {
                 SmartLedsAdapter::new(rmt_channel, p.GPIO33, rmt_buffer)

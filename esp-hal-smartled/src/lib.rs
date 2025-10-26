@@ -45,10 +45,7 @@ use esp_hal::{
     Async, Blocking,
     clock::Clocks,
     gpio::{Level, interconnect::PeripheralOutput},
-    rmt::{
-        Channel, Error as RmtError, PulseCode, RawChannelAccess, TxChannel, TxChannelAsync,
-        TxChannelConfig, TxChannelCreator, TxChannelInternal,
-    },
+    rmt::{Channel, Error as RmtError, PulseCode, Tx, TxChannelConfig, TxChannelCreator},
 };
 use rgb::Grb;
 use smart_leds_trait::{SmartLedsWrite, SmartLedsWriteAsync};
@@ -81,7 +78,7 @@ impl From<RmtError> for LedAdapterError {
     }
 }
 
-fn led_pulses_for_clock(src_clock: u32) -> (u32, u32) {
+fn led_pulses_for_clock(src_clock: u32) -> (PulseCode, PulseCode) {
     (
         PulseCode::new(
             Level::High,
@@ -108,8 +105,8 @@ fn led_config() -> TxChannelConfig {
 
 fn convert_to_pulses(
     value: &[u8],
-    mut_iter: &mut IterMut<u32>,
-    pulses: (u32, u32),
+    mut_iter: &mut IterMut<PulseCode>,
+    pulses: (PulseCode, PulseCode),
 ) -> Result<(), LedAdapterError> {
     for v in value {
         convert_rgb_channel_to_pulses(*v, mut_iter, pulses)?;
@@ -119,8 +116,8 @@ fn convert_to_pulses(
 
 fn convert_rgb_channel_to_pulses(
     channel_value: u8,
-    mut_iter: &mut IterMut<u32>,
-    pulses: (u32, u32),
+    mut_iter: &mut IterMut<PulseCode>,
+    pulses: (PulseCode, PulseCode),
 ) -> Result<(), LedAdapterError> {
     for position in [128, 64, 32, 16, 8, 4, 2, 1] {
         *mut_iter.next().ok_or(LedAdapterError::BufferSizeExceeded)? =
@@ -148,7 +145,7 @@ pub const fn buffer_size(num_leds: usize) -> usize {
 /// Function to calculate the required RMT buffer size for a given number of RGBW LEDs when using
 /// the blocking API.
 ///
-/// For RGB leds use [buffer_size_rgb].
+/// For RGB leds use [buffer_size].
 ///
 /// This buffer size is calculated for the synchronous API provided by the [SmartLedsAdapter].
 /// [buffer_size_async] should be used for the asynchronous API.
@@ -167,10 +164,10 @@ pub const fn buffer_size_rgbw(num_leds: usize) -> usize {
 #[macro_export]
 macro_rules! smart_led_buffer {
     ( $num_leds: expr ) => {
-        [0u32; $crate::buffer_size($num_leds)]
+        [::esp_hal::rmt::PulseCode::end_marker(); $crate::buffer_size($num_leds)]
     };
     ( $num_leds: expr; RGBW ) => {
-        [0u32; $crate::buffer_size_rgbw($num_leds)]
+        [::esp_hal::rmt::PulseCode::end_marker(); $crate::buffer_size_rgbw($num_leds)]
     };
 }
 
@@ -185,44 +182,37 @@ macro_rules! smartLedBuffer {
 
 /// Adapter taking an RMT channel and a specific pin and providing RGB LED
 /// interaction functionality using the `smart-leds` crate
-pub struct SmartLedsAdapter<TX, const BUFFER_SIZE: usize, Color = Grb<u8>>
-where
-    TX: RawChannelAccess + TxChannelInternal + 'static,
-{
-    channel: Option<Channel<Blocking, TX>>,
-    rmt_buffer: [u32; BUFFER_SIZE],
-    pulses: (u32, u32),
+pub struct SmartLedsAdapter<'ch, const BUFFER_SIZE: usize, Color = Grb<u8>> {
+    channel: Option<Channel<'ch, Blocking, Tx>>,
+    rmt_buffer: [PulseCode; BUFFER_SIZE],
+    pulses: (PulseCode, PulseCode),
     color: PhantomData<Color>,
 }
 
-impl<'d, TX, const BUFFER_SIZE: usize> SmartLedsAdapter<TX, BUFFER_SIZE, Grb<u8>>
-where
-    TX: RawChannelAccess + TxChannelInternal + 'static,
-{
+impl<'ch, const BUFFER_SIZE: usize> SmartLedsAdapter<'ch, BUFFER_SIZE, Grb<u8>> {
     /// Create a new adapter object that drives the pin using the RMT channel.
-    pub fn new<C, O>(channel: C, pin: O, rmt_buffer: [u32; BUFFER_SIZE]) -> Self
+    pub fn new<C, O>(channel: C, pin: O, rmt_buffer: [PulseCode; BUFFER_SIZE]) -> Self
     where
-        O: PeripheralOutput<'d>,
-        C: TxChannelCreator<'d, Blocking, Raw = TX>,
+        O: PeripheralOutput<'ch>,
+        C: TxChannelCreator<'ch, Blocking>,
     {
         Self::new_with_color(channel, pin, rmt_buffer)
     }
 }
 
-impl<'d, TX, const BUFFER_SIZE: usize, Color> SmartLedsAdapter<TX, BUFFER_SIZE, Color>
+impl<'ch, const BUFFER_SIZE: usize, Color> SmartLedsAdapter<'ch, BUFFER_SIZE, Color>
 where
-    TX: RawChannelAccess + TxChannelInternal + 'static,
     Color: rgb::ComponentSlice<u8>,
 {
     /// Create a new adapter object that drives the pin using the RMT channel.
     pub fn new_with_color<C, O>(
         channel: C,
         pin: O,
-        rmt_buffer: [u32; BUFFER_SIZE],
-    ) -> SmartLedsAdapter<TX, BUFFER_SIZE, Color>
+        rmt_buffer: [PulseCode; BUFFER_SIZE],
+    ) -> SmartLedsAdapter<'ch, BUFFER_SIZE, Color>
     where
-        O: PeripheralOutput<'d>,
-        C: TxChannelCreator<'d, Blocking, Raw = TX>,
+        O: PeripheralOutput<'ch>,
+        C: TxChannelCreator<'ch, Blocking>,
     {
         let channel = channel.configure_tx(pin, led_config()).unwrap();
 
@@ -238,10 +228,9 @@ where
     }
 }
 
-impl<TX, const BUFFER_SIZE: usize, Color> SmartLedsWrite
-    for SmartLedsAdapter<TX, BUFFER_SIZE, Color>
+impl<'ch, const BUFFER_SIZE: usize, Color> SmartLedsWrite
+    for SmartLedsAdapter<'ch, BUFFER_SIZE, Color>
 where
-    TX: RawChannelAccess + TxChannelInternal + 'static,
     Color: rgb::ComponentSlice<u8>,
 {
     type Error = LedAdapterError;
@@ -266,9 +255,9 @@ where
         }
 
         // Finally, add an end element.
-        *seq_iter.next().ok_or(LedAdapterError::BufferSizeExceeded)? = 0;
+        *seq_iter.next().ok_or(LedAdapterError::BufferSizeExceeded)? = PulseCode::end_marker();
 
-        // Perform the actual RMT operation. We use the u32 values here right away.
+        // Perform the actual RMT operation.
         let channel = self.channel.take().unwrap();
         match channel.transmit(&self.rmt_buffer)?.wait() {
             Ok(chan) => {
@@ -311,44 +300,37 @@ pub const fn buffer_size_async_rgbw(num_leds: usize) -> usize {
 
 /// Adapter taking an RMT channel and a specific pin and providing RGB LED
 /// interaction functionality.
-pub struct SmartLedsAdapterAsync<Tx, const BUFFER_SIZE: usize, Color = Grb<u8>>
-where
-    Tx: RawChannelAccess + TxChannelInternal + 'static,
-{
-    channel: Channel<Async, Tx>,
-    rmt_buffer: [u32; BUFFER_SIZE],
-    pulses: (u32, u32),
+pub struct SmartLedsAdapterAsync<'ch, const BUFFER_SIZE: usize, Color = Grb<u8>> {
+    channel: Channel<'ch, Async, Tx>,
+    rmt_buffer: [PulseCode; BUFFER_SIZE],
+    pulses: (PulseCode, PulseCode),
     color: PhantomData<Color>,
 }
 
-impl<'d, Tx, const BUFFER_SIZE: usize> SmartLedsAdapterAsync<Tx, BUFFER_SIZE, Grb<u8>>
-where
-    Tx: RawChannelAccess + TxChannelInternal + 'static,
-{
+impl<'ch, const BUFFER_SIZE: usize> SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Grb<u8>> {
     /// Create a new adapter object that drives the pin using the RMT channel.
-    pub fn new<C, O>(channel: C, pin: O, rmt_buffer: [u32; BUFFER_SIZE]) -> Self
+    pub fn new<C, O>(channel: C, pin: O, rmt_buffer: [PulseCode; BUFFER_SIZE]) -> Self
     where
-        O: PeripheralOutput<'d>,
-        C: TxChannelCreator<'d, Async, Raw = Tx>,
+        O: PeripheralOutput<'ch>,
+        C: TxChannelCreator<'ch, Async>,
     {
         Self::new_with_color(channel, pin, rmt_buffer)
     }
 }
 
-impl<'d, Tx, const BUFFER_SIZE: usize, Color> SmartLedsAdapterAsync<Tx, BUFFER_SIZE, Color>
+impl<'ch, const BUFFER_SIZE: usize, Color> SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Color>
 where
-    Tx: RawChannelAccess + TxChannelInternal + 'static,
     Color: rgb::ComponentSlice<u8>,
 {
     /// Create a new adapter object that drives the pin using the RMT channel.
     pub fn new_with_color<C, O>(
         channel: C,
         pin: O,
-        rmt_buffer: [u32; BUFFER_SIZE],
-    ) -> SmartLedsAdapterAsync<Tx, BUFFER_SIZE, Color>
+        rmt_buffer: [PulseCode; BUFFER_SIZE],
+    ) -> SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Color>
     where
-        O: PeripheralOutput<'d>,
-        C: TxChannelCreator<'d, Async, Raw = Tx>,
+        O: PeripheralOutput<'ch>,
+        C: TxChannelCreator<'ch, Async>,
     {
         let channel = channel.configure_tx(pin, led_config()).unwrap();
 
@@ -382,21 +364,20 @@ where
     /// Async sends one pixel at a time so needs a delimiter after each pixel
     fn convert_to_pulses(
         value: &[u8],
-        mut_iter: &mut IterMut<u32>,
-        pulses: (u32, u32),
+        mut_iter: &mut IterMut<PulseCode>,
+        pulses: (PulseCode, PulseCode),
     ) -> Result<(), LedAdapterError> {
         for v in value {
             convert_rgb_channel_to_pulses(*v, mut_iter, pulses)?;
         }
-        *mut_iter.next().ok_or(LedAdapterError::BufferSizeExceeded)? = 0;
+        *mut_iter.next().ok_or(LedAdapterError::BufferSizeExceeded)? = PulseCode::end_marker();
         Ok(())
     }
 }
 
-impl<Tx, const BUFFER_SIZE: usize, Color> SmartLedsWriteAsync
-    for SmartLedsAdapterAsync<Tx, BUFFER_SIZE, Color>
+impl<'ch, const BUFFER_SIZE: usize, Color> SmartLedsWriteAsync
+    for SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Color>
 where
-    Tx: RawChannelAccess + TxChannelInternal + 'static,
     Color: rgb::ComponentSlice<u8>,
 {
     type Error = LedAdapterError;

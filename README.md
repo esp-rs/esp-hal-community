@@ -12,7 +12,7 @@ A collection of crates for use alongside [esp-hal], but which are maintained by 
 
 The following command can be used to run the smart LED example on a ESP32C6 target.
 ```bash
-cargo +stable run --example hello_rgb --features "esp32c6,esp-hal/unstable" --target=riscv32imac-unknown-none-elf --release
+cargo +stable run --example hello_rgb --features "esp32c6" --target=riscv32imac-unknown-none-elf --release
 ```
 
 This repository also provides a [`justfile`](https://github.com/casey/just) which provides
