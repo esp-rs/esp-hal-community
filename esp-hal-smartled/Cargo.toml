@@ -24,6 +24,7 @@ esp-backtrace = { version = "0.18", features = [
     "panic-handler",
     "println",
 ] }
+esp-hal = { version = "1.0.0-rc.1", features = ["unstable"] }
 # Use esp-rtos for embassy support instead of esp-hal-embassy
 esp-rtos = { version = "^0.1.1", features = ["embassy"] }
 esp-bootloader-esp-idf = "0.3"

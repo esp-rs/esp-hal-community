@@ -25,6 +25,7 @@ esp-backtrace = { version = "0.18", features = [
   "println",
 ] }
 esp-bootloader-esp-idf = "0.3"
+esp-hal = { version = "1.0.0-rc.1", features = ["unstable"] }
 esp-println = "0.16"
 
 [features]
