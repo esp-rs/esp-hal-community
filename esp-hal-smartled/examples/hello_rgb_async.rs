@@ -71,7 +71,7 @@ async fn main(_spawner: Spawner) -> ! {
     // We use one of the RMT channels to instantiate a `SmartLedsAdapterAsync` which can
     // be used directly with all `smart_led` implementations
     let rmt_channel = rmt.channel0;
-    let rmt_buffer = [esp_hal::rmt::PulseCode::default(); buffer_size_async(1)];
+    let mut rmt_buffer = [esp_hal::rmt::PulseCode::default(); buffer_size_async(1)];
 
     // Each devkit uses a unique GPIO for the RGB LED, so in order to support
     // all chips we must unfortunately use `#[cfg]`s:

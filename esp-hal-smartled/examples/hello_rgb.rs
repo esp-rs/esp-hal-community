@@ -61,7 +61,7 @@ fn main() -> ! {
     // We use one of the RMT channels to instantiate a `SmartLedsAdapter` which can
     // be used directly with all `smart_led` implementations
     let rmt_channel = rmt.channel0;
-    let rmt_buffer = smart_led_buffer!(1);
+    let mut rmt_buffer = smart_led_buffer!(1);
 
     // Each devkit uses a unique GPIO for the RGB LED, so in order to support
     // all chips we must unfortunately use `#[cfg]`s:
