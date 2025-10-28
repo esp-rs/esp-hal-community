@@ -78,15 +78,15 @@ async fn main(_spawner: Spawner) -> ! {
     let mut led = {
         cfg_if::cfg_if! {
             if #[cfg(feature = "esp32")] {
-                SmartLedsAdapterAsync::new(rmt_channel, p.GPIO33, rmt_buffer)
+                SmartLedsAdapterAsync::new(rmt_channel, p.GPIO33, &mut rmt_buffer)
             } else if #[cfg(feature = "esp32c3")] {
-                SmartLedsAdapterAsync::new(rmt_channel, p.GPIO2, rmt_buffer)
+                SmartLedsAdapterAsync::new(rmt_channel, p.GPIO2, &mut rmt_buffer)
             } else if #[cfg(any(feature = "esp32c6", feature = "esp32h2"))] {
-                SmartLedsAdapterAsync::new(rmt_channel, p.GPIO8, rmt_buffer)
+                SmartLedsAdapterAsync::new(rmt_channel, p.GPIO8, &mut rmt_buffer)
             } else if #[cfg(feature = "esp32s2")] {
-                SmartLedsAdapterAsync::new(rmt_channel, p.GPIO18, rmt_buffer)
+                SmartLedsAdapterAsync::new(rmt_channel, p.GPIO18, &mut rmt_buffer)
             } else if #[cfg(feature = "esp32s3")] {
-                SmartLedsAdapterAsync::new(rmt_channel, p.GPIO48, rmt_buffer)
+                SmartLedsAdapterAsync::new(rmt_channel, p.GPIO48, &mut rmt_buffer)
             }
         }
     };
