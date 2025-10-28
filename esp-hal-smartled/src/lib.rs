@@ -184,14 +184,14 @@ macro_rules! smartLedBuffer {
 /// interaction functionality using the `smart-leds` crate
 pub struct SmartLedsAdapter<'ch, const BUFFER_SIZE: usize, Color = Grb<u8>> {
     channel: Option<Channel<'ch, Blocking, Tx>>,
-    rmt_buffer: [PulseCode; BUFFER_SIZE],
+    rmt_buffer: &'ch mut [PulseCode; BUFFER_SIZE],
     pulses: (PulseCode, PulseCode),
     color: PhantomData<Color>,
 }
 
 impl<'ch, const BUFFER_SIZE: usize> SmartLedsAdapter<'ch, BUFFER_SIZE, Grb<u8>> {
     /// Create a new adapter object that drives the pin using the RMT channel.
-    pub fn new<C, O>(channel: C, pin: O, rmt_buffer: [PulseCode; BUFFER_SIZE]) -> Self
+    pub fn new<C, O>(channel: C, pin: O, rmt_buffer: &'ch mut [PulseCode; BUFFER_SIZE]) -> Self
     where
         O: PeripheralOutput<'ch>,
         C: TxChannelCreator<'ch, Blocking>,
@@ -208,7 +208,7 @@ where
     pub fn new_with_color<C, O>(
         channel: C,
         pin: O,
-        rmt_buffer: [PulseCode; BUFFER_SIZE],
+        rmt_buffer: &'ch mut [PulseCode; BUFFER_SIZE],
     ) -> SmartLedsAdapter<'ch, BUFFER_SIZE, Color>
     where
         O: PeripheralOutput<'ch>,
@@ -259,7 +259,7 @@ where
 
         // Perform the actual RMT operation.
         let channel = self.channel.take().unwrap();
-        match channel.transmit(&self.rmt_buffer)?.wait() {
+        match channel.transmit(self.rmt_buffer)?.wait() {
             Ok(chan) => {
                 self.channel = Some(chan);
                 Ok(())
@@ -302,14 +302,14 @@ pub const fn buffer_size_async_rgbw(num_leds: usize) -> usize {
 /// interaction functionality.
 pub struct SmartLedsAdapterAsync<'ch, const BUFFER_SIZE: usize, Color = Grb<u8>> {
     channel: Channel<'ch, Async, Tx>,
-    rmt_buffer: [PulseCode; BUFFER_SIZE],
+    rmt_buffer: &'ch mut [PulseCode; BUFFER_SIZE],
     pulses: (PulseCode, PulseCode),
     color: PhantomData<Color>,
 }
 
 impl<'ch, const BUFFER_SIZE: usize> SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Grb<u8>> {
     /// Create a new adapter object that drives the pin using the RMT channel.
-    pub fn new<C, O>(channel: C, pin: O, rmt_buffer: [PulseCode; BUFFER_SIZE]) -> Self
+    pub fn new<C, O>(channel: C, pin: O, rmt_buffer: &'ch mut [PulseCode; BUFFER_SIZE]) -> Self
     where
         O: PeripheralOutput<'ch>,
         C: TxChannelCreator<'ch, Async>,
@@ -326,7 +326,7 @@ where
     pub fn new_with_color<C, O>(
         channel: C,
         pin: O,
-        rmt_buffer: [PulseCode; BUFFER_SIZE],
+        rmt_buffer: &'ch mut [PulseCode; BUFFER_SIZE],
     ) -> SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Color>
     where
         O: PeripheralOutput<'ch>,
