@@ -63,8 +63,8 @@ esp32s3 = [
 [package.metadata.docs.rs]
 # use a RISC-V chip and target for docs.rs as it doesn’t require a special compiler
 features = ["esp32c3", "esp-hal/unstable"]
-default-target = "riscv32imac-unknown-none-elf"
-targets = ["riscv32imac-unknown-none-elf"]
+default-target = "riscv32imc-unknown-none-elf"
+targets = ["riscv32imc-unknown-none-elf"]
 
 [dev-dependencies]
 # example runs on ESP32-C6
