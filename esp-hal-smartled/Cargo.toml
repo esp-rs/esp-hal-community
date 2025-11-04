@@ -4,6 +4,8 @@ version = "0.23.0"
 edition = "2024"
 rust-version = "1.91"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/kleinesfilmroellchen/esp-hal-smartled"
+documentation = "https://docs.rs/esp-hal-smartled2"
 description = "smart-leds driver for esp-hal using RMT peripheral"
 
 [lib]
