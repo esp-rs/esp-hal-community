@@ -3,6 +3,8 @@ name = "esp-hal-smartled"
 version = "0.23.0"
 edition = "2024"
 rust-version = "1.91"
+license = "MIT OR Apache-2.0"
+description = "smart-leds driver for esp-hal using RMT peripheral"
 
 [dependencies]
 esp-hal = { version = "=1.0.0", default-features = false, features = [
