@@ -2,7 +2,7 @@
 //!
 //! Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-rmt-driver), which is based on the unofficial `esp-idf` SDK, this crate is based on the official no-std [esp-hal](https://github.com/esp-rs/esp-hal).
 //!
-//! This driver uses the blocking RMT API, which is not
+//! This driver uses the blocking RMT API, which is not suitable for use in async code. The [`SmartLedsWrite`] trait is implemented for [`SmartLedsAdapter`] only if a [`Blocking`] RMT channel is passed.
 //!
 //! ## Example
 //!
