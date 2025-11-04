@@ -5,6 +5,8 @@
 ![MSRV](https://img.shields.io/badge/MSRV-1.91-blue?labelColor=1C2C2E&style=flat-square)
 ![Crates.io](https://img.shields.io/crates/l/esp-hal-smartled?labelColor=1C2C2E&style=flat-square)
 
+> **NOTE:** This is an enhanced up-to-date fork of [esp-hal-smartled](https://crates.io/crates/esp-hal-smartled), which seems abandoned at the time of writing. Users of `esp-hal-smartled` can migrate to `esp-hal-smartled2` with minimal effort. If possible, this crate’s features will be merged into `esp-hal-smartled`.
+
 Allows for the use of an RMT output channel on the ESP32 family to easily drive smart RGB LEDs. This is a driver for the [smart-leds](https://crates.io/crates/smart-leds) framework and allows using the utility functions from this crate as well as higher-level libraries based on smart-leds.
 
 Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-rmt-driver), which is based on the unofficial `esp-idf` SDK, this crate is based on the official no-std [esp-hal](https://github.com/esp-rs/esp-hal).
