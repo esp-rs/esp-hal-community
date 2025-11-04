@@ -2,22 +2,22 @@
 
 [![Crates.io](https://img.shields.io/crates/v/esp-hal-smartled?labelColor=1C2C2E&color=C96329&logo=Rust&style=flat-square)](https://crates.io/crates/esp-hal-smartled)
 [![docs.rs](https://img.shields.io/docsrs/esp-hal-smartled?labelColor=1C2C2E&color=C96329&logo=rust&style=flat-square)](https://docs.rs/esp-hal-smartled)
-![MSRV](https://img.shields.io/badge/MSRV-1.79-blue?labelColor=1C2C2E&style=flat-square)
+![MSRV](https://img.shields.io/badge/MSRV-1.91-blue?labelColor=1C2C2E&style=flat-square)
 ![Crates.io](https://img.shields.io/crates/l/esp-hal-smartled?labelColor=1C2C2E&style=flat-square)
-[![Matrix](https://img.shields.io/matrix/esp-rs:matrix.org?label=join%20matrix&labelColor=1C2C2E&color=BEC5C9&logo=matrix&style=flat-square)](https://matrix.to/#/#esp-rs:matrix.org)
 
-Allows for the use of an RMT output channel to easily interact with RGB LEDs and use the convenience functions of the [smart-leds] crate.
+Allows for the use of an RMT output channel on the ESP32 family to easily drive smart RGB LEDs. This is a driver for the [smart-leds](https://crates.io/crates/smart-leds) framework and allows using the utility functions from this crate as well as higher-level libraries based on smart-leds.
 
-[smart-leds]: https://crates.io/crates/smart-leds
+Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-rmt-driver), which is based on the unofficial `esp-idf` SDK, this crate is based on the official no-std [esp-hal](https://github.com/esp-rs/esp-hal).
 
 ## [Documentation]
 
 [documentation]: https://docs.rs/esp-hal-smartled/
 
-## Minimum Supported Rust Version (MSRV)
+## Compatibility
 
-This crate is guaranteed to compile on stable Rust 1.84 and up. It _might_
-compile with older versions but that may change in any new patch release.
+This crate is guaranteed to compile on whatever Rust version esp-hal requires, which is the latest stable version at the time of release. It _might_ compile with older versions but that may change in any new patch release.
+
+This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compatible with *exactly* esp-hal 1.0.0, as the peripheral API might change in any future release and is likely to go through significant changes before stabilization. In order to use this crate, you have to enable the `unstable` feature on esp-hal.
 
 ## License
 
