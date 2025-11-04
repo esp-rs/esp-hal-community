@@ -107,11 +107,17 @@ impl Timing for Ws2811Timing {
 #[non_exhaustive]
 pub enum AdapterError {
     /// Raised in the event that the RMT buffer is not large enough.
-    /// 
+    ///
     /// This almost always points to an issue with the `BUFFER_SIZE` parameter of [`SmartLedsAdapter`]. You should create this parameter using [`buffer_size`], passing in the desired number of LEDs that will be controlled.
     BufferSizeExceeded,
     /// Raised if something goes wrong in the transmission. This contains the inner HAL error ([`RmtError`]).
     TransmissionError(RmtError),
+}
+
+impl From<RmtError> for AdapterError {
+    fn from(value: RmtError) -> Self {
+        Self::TransmissionError(value)
+    }
 }
 
 /// Calculate the required buffer size for a certain number of LEDs. This should be used to create the `BUFFER_SIZE` parameter of [`SmartLedsAdapter`].
@@ -217,7 +223,7 @@ where
     /// Note that calling this function usually requires you to specify the desired buffer size, [`ColorOrder`] and [`Timing`]. See the struct documentation for details.
     ///
     /// If you want to reuse the channel afterwards, you can use [`esp_hal::rmt::ChannelCreator::reborrow`] to create a shorter-lived derived channel.
-    pub fn new<C, P>(channel: C, pin: P) -> SmartLedsAdapter<'d, BUFFER_SIZE, Mode, Order, Timing>
+    pub fn new<C, P>(channel: C, pin: P) -> Self
     where
         C: TxChannelCreator<'d, Mode>,
         P: PeripheralOutput<'d>,
@@ -332,7 +338,11 @@ where
 
         // Perform the actual RMT operation. We use the u32 values here right away.
         let channel = self.channel.take().unwrap();
-        match channel.transmit(&self.rmt_buffer).unwrap().wait() {
+        // TODO: If the transmit fails, we’re in an unsafe state and future calls to write() will panic.
+        // This is currently unavoidable since transmit consumes the channel on error.
+        // This is a known design flaw in the current RMT API and will be fixed soon.
+        // We should adjust our usage accordingly as soon as possible.
+        match channel.transmit(&self.rmt_buffer)?.wait() {
             Ok(chan) => {
                 self.channel = Some(chan);
                 Ok(())
