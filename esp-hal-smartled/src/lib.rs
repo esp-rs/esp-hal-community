@@ -36,12 +36,12 @@ use core::{fmt::Debug, marker::PhantomData, slice::IterMut};
 
 pub use color_order::ColorOrder;
 use esp_hal::{
-    Blocking, DriverMode,
+    Async, Blocking, DriverMode,
     clock::Clocks,
     gpio::{Level, interconnect::PeripheralOutput},
     rmt::{Channel, Error as RmtError, PulseCode, Tx, TxChannelConfig, TxChannelCreator},
 };
-use smart_leds_trait::{RGB8, SmartLedsWrite};
+use smart_leds_trait::{RGB8, SmartLedsWrite, SmartLedsWriteAsync};
 
 /// Common trait for all different smart LED dependent timings.
 ///
@@ -304,6 +304,27 @@ where
 
         Ok(())
     }
+
+    /// Create and store RMT data from the color information provided.
+    fn create_rmt_data(
+        &mut self,
+        iterator: impl IntoIterator<Item = impl Into<RGB8>>,
+    ) -> Result<(), AdapterError> {
+        // We always start from the beginning of the buffer
+        let mut seq_iter = self.rmt_buffer.iter_mut();
+
+        // Add all converted iterator items to the buffer.
+        // This will result in an `BufferSizeExceeded` error in case
+        // the iterator provides more elements than the buffer can take.
+        for item in iterator {
+            Self::convert_rgb_to_pulse(item.into(), &mut seq_iter, self.pulses)?;
+        }
+
+        // Finally, add an end element.
+        *seq_iter.next().ok_or(AdapterError::BufferSizeExceeded)? = PulseCode::end_marker();
+
+        Ok(())
+    }
 }
 
 impl<'d, const BUFFER_SIZE: usize, Order, Timing> SmartLedsWrite
@@ -323,18 +344,7 @@ where
         T: IntoIterator<Item = I>,
         I: Into<Self::Color>,
     {
-        // We always start from the beginning of the buffer
-        let mut seq_iter = self.rmt_buffer.iter_mut();
-
-        // Add all converted iterator items to the buffer.
-        // This will result in an `BufferSizeExceeded` error in case
-        // the iterator provides more elements than the buffer can take.
-        for item in iterator {
-            Self::convert_rgb_to_pulse(item.into(), &mut seq_iter, self.pulses)?;
-        }
-
-        // Finally, add an end element.
-        *seq_iter.next().ok_or(AdapterError::BufferSizeExceeded)? = PulseCode::end_marker();
+        self.create_rmt_data(iterator)?;
 
         // Perform the actual RMT operation. We use the u32 values here right away.
         let channel = self.channel.take().unwrap();
@@ -352,5 +362,30 @@ where
                 Err(AdapterError::TransmissionError(e))
             }
         }
+    }
+}
+
+impl<'d, const BUFFER_SIZE: usize, Order, Timing> SmartLedsWriteAsync
+    for SmartLedsAdapter<'d, BUFFER_SIZE, Async, Order, Timing>
+where
+    Order: ColorOrder,
+    Timing: crate::Timing,
+{
+    type Error = AdapterError;
+    type Color = RGB8;
+
+    /// Convert all RGB8 items of the iterator to the RMT format and
+    /// add them to internal buffer, then start a singular RMT operation
+    /// based on that buffer.
+    async fn write<T, I>(&mut self, iterator: T) -> Result<(), Self::Error>
+    where
+        T: IntoIterator<Item = I>,
+        I: Into<Self::Color>,
+    {
+        self.create_rmt_data(iterator)?;
+
+        // Perform the actual RMT operation. We use the u32 values here right away.
+        self.channel.as_mut().unwrap().transmit(&self.rmt_buffer).await?;
+        Ok(())
     }
 }

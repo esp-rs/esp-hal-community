@@ -14,7 +14,12 @@ smart-leds-trait = "0.3"
 defmt = { version = "1", optional = true }
 
 [features]
-defmt = ["dep:defmt", "esp-hal/defmt", "esp-bootloader-esp-idf/defmt"]
+defmt = [
+    "dep:defmt",
+    "esp-hal/defmt",
+    "esp-bootloader-esp-idf/defmt",
+    "esp-rtos/defmt",
+]
 
 # unfortunately necessary ...
 # not to be used by upstream.
@@ -24,42 +29,49 @@ esp32 = [
     "esp-println/esp32",
     "esp-backtrace/esp32",
     "esp-bootloader-esp-idf/esp32",
+    "esp-rtos/esp32",
 ]
 esp32c2 = [
     "esp-hal/esp32c2",
     "esp-println/esp32c2",
     "esp-backtrace/esp32c2",
     "esp-bootloader-esp-idf/esp32c2",
+    "esp-rtos/esp32c2",
 ]
 esp32c3 = [
     "esp-hal/esp32c3",
     "esp-println/esp32c3",
     "esp-backtrace/esp32c3",
     "esp-bootloader-esp-idf/esp32c3",
+    "esp-rtos/esp32c3",
 ]
 esp32c6 = [
     "esp-hal/esp32c6",
     "esp-println/esp32c6",
     "esp-backtrace/esp32c6",
     "esp-bootloader-esp-idf/esp32c6",
+    "esp-rtos/esp32c6",
 ]
 esp32h2 = [
     "esp-hal/esp32h2",
     "esp-println/esp32h2",
     "esp-backtrace/esp32h2",
     "esp-bootloader-esp-idf/esp32h2",
+    "esp-rtos/esp32h2",
 ]
 esp32s2 = [
     "esp-hal/esp32s2",
     "esp-println/esp32s2",
     "esp-backtrace/esp32s2",
     "esp-bootloader-esp-idf/esp32s2",
+    "esp-rtos/esp32s2",
 ]
 esp32s3 = [
     "esp-hal/esp32s3",
     "esp-println/esp32s3",
     "esp-backtrace/esp32s3",
     "esp-bootloader-esp-idf/esp32s3",
+    "esp-rtos/esp32s3",
 ]
 
 [package.metadata.docs.rs]
@@ -69,10 +81,12 @@ default-target = "riscv32imc-unknown-none-elf"
 targets = ["riscv32imc-unknown-none-elf"]
 
 [dev-dependencies]
-# example runs on ESP32-C6
 esp-hal = { version = "=1.0.0", features = ["unstable"] }
+esp-rtos = { version = "0.2", features = ["embassy"] }
 esp-backtrace = { version = "0.18", features = ["panic-handler", "println"] }
-esp-println = { version = "0.16", features = ["auto"] }
+esp-println = { version = "0.16", features = ["defmt-espflash", "auto"] }
 esp-bootloader-esp-idf = { version = "0.4.0" }
 smart-leds = "0.4"
 cfg-if = "1"
+embassy-executor = "0.9"
+embassy-time = "0.5"
