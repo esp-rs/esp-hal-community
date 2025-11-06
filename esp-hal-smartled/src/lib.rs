@@ -195,6 +195,18 @@ pub mod color_order {
             }
         }
     }
+
+    /// [`ColorOrder`] BRG.
+    pub enum Brg {}
+    impl ColorOrder for Brg {
+        fn get_channel_data(color: RGB8, channel: Channel) -> u8 {
+            match channel {
+                Channel::First => color.b,
+                Channel::Second => color.r,
+                Channel::Third => color.g,
+            }
+        }
+    }
 }
 
 /// [`SmartLedsWrite`] driver implementation using the ESP32’s “remote control” (RMT) peripheral for hardware-offloaded, fast control of smart LEDs.
