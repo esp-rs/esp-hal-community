@@ -91,13 +91,22 @@ impl Timing for Ws2812Timing {
     const TIME_1_LOW: u16 = 600;
 }
 
-/// Timing for the WS2811 driver ICs.
+/// Timing for the WS2811 driver ICs, low-speed mode.
+pub enum Ws2811LowSpeedTiming {}
+impl Timing for Ws2811LowSpeedTiming {
+    const TIME_0_HIGH: u16 = 500;
+    const TIME_0_LOW: u16 = 2000;
+    const TIME_1_HIGH: u16 = 1200;
+    const TIME_1_LOW: u16 = 1300;
+}
+
+/// Timing for the WS2811 driver ICs, high-speed mode.
 pub enum Ws2811Timing {}
 impl Timing for Ws2811Timing {
-    const TIME_0_HIGH: u16 = 500;
-    const TIME_0_LOW: u16 = 1200;
-    const TIME_1_HIGH: u16 = 2000;
-    const TIME_1_LOW: u16 = 1300;
+    const TIME_0_HIGH: u16 = Ws2811LowSpeedTiming::TIME_0_HIGH / 2;
+    const TIME_0_LOW: u16 = Ws2811LowSpeedTiming::TIME_0_LOW / 2;
+    const TIME_1_HIGH: u16 = Ws2811LowSpeedTiming::TIME_1_HIGH / 2;
+    const TIME_1_LOW: u16 = Ws2811LowSpeedTiming::TIME_1_LOW / 2;
 }
 
 /// All types of errors that can happen during the conversion and transmission
@@ -385,7 +394,11 @@ where
         self.create_rmt_data(iterator)?;
 
         // Perform the actual RMT operation. We use the u32 values here right away.
-        self.channel.as_mut().unwrap().transmit(&self.rmt_buffer).await?;
+        self.channel
+            .as_mut()
+            .unwrap()
+            .transmit(&self.rmt_buffer)
+            .await?;
         Ok(())
     }
 }
