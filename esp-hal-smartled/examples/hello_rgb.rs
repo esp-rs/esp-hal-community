@@ -61,22 +61,22 @@ fn main() -> ! {
     // We use one of the RMT channels to instantiate a `SmartLedsAdapter` which can
     // be used directly with all `smart_led` implementations
     let rmt_channel = rmt.channel0;
-    let rmt_buffer = smart_led_buffer!(1);
+    let mut rmt_buffer = smart_led_buffer!(1);
 
     // Each devkit uses a unique GPIO for the RGB LED, so in order to support
     // all chips we must unfortunately use `#[cfg]`s:
     let mut led = {
         cfg_if::cfg_if! {
             if #[cfg(feature = "esp32")] {
-                SmartLedsAdapter::new(rmt_channel, p.GPIO33, rmt_buffer)
+                SmartLedsAdapter::new(rmt_channel, p.GPIO33, &mut rmt_buffer)
             } else if #[cfg(feature = "esp32c3")] {
-                SmartLedsAdapter::new(rmt_channel, p.GPIO2, rmt_buffer)
+                SmartLedsAdapter::new(rmt_channel, p.GPIO2, &mut rmt_buffer)
             } else if #[cfg(any(feature = "esp32c6", feature = "esp32h2"))] {
-                SmartLedsAdapter::new(rmt_channel, p.GPIO8, rmt_buffer)
+                SmartLedsAdapter::new(rmt_channel, p.GPIO8, &mut rmt_buffer)
             } else if #[cfg(feature = "esp32s2")] {
-                SmartLedsAdapter::new(rmt_channel, p.GPIO18, rmt_buffer)
+                SmartLedsAdapter::new(rmt_channel, p.GPIO18, &mut rmt_buffer)
             } else if #[cfg(feature = "esp32s3")] {
-                SmartLedsAdapter::new(rmt_channel, p.GPIO48, rmt_buffer)
+                SmartLedsAdapter::new(rmt_channel, p.GPIO48, &mut rmt_buffer)
             }
         }
     };
