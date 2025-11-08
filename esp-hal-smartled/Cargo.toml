@@ -1,8 +1,8 @@
 [package]
 name = "esp-hal-smartled2"
-version = "0.25.0"
+version = "0.25.1"
 edition = "2024"
-rust-version = "1.91"
+rust-version = "1.90"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/kleinesfilmroellchen/esp-hal-smartled"
 documentation = "https://docs.rs/esp-hal-smartled2"
