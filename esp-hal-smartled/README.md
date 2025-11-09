@@ -21,11 +21,27 @@ Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-r
 
 [documentation]: https://docs.rs/esp-hal-smartled2/
 
+Also have a look at the [examples](https://github.com/kleinesfilmroellchen/esp-hal-smartled/blob/main/examples).
+
 ## Compatibility
 
 This crate is guaranteed to compile on whatever Rust version esp-hal requires, which is the latest stable version at the time of release. It _might_ compile with older versions but that may change in any new patch release.
 
 This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compatible with _exactly_ esp-hal 1.0.0, as the peripheral API might change in any future release and is likely to go through significant changes before stabilization. In order to use this crate, you have to enable the `unstable` feature on esp-hal.
+
+### Migration
+
+- `0.26`
+  - `SmartLedsAdapter::new` now returns `Result<SmartLedsAdapter, RmtError>`, so that you can handle configuration errors if desired.
+  - `SmartLedsAdapter::new_with_memsize` was added to specify a larger RMT memory size when desired.
+- `0.25`
+  - WS2811 timings have been changed to use fast timings instead of slow timings; slow timings are still available through `Ws2811LowSpeedTiming`. If you experience issues with WS2811, switch to the low-speed timing.
+- `0.24`
+  - `SmartLedsWriteAsync` is now implemented for async RMT channels. Refer to the [async example](https://github.com/kleinesfilmroellchen/esp-hal-smartled/blob/main/examples/hello_rgb_async.rs) for more information.
+- `0.23` (from `esp-hal-smartled`):
+  - `SmartLedAdapter` now takes type parameters describing the timing and LED buffer size.
+  - It is no longer needed to allocate a separate buffer and pass it into `new`. The `smartLedBuffer!` macro has been removed, and the `buffer_size` function can be used instead to calculate the correct buffer size.
+  - Have a look at the documentation or the [example](https://github.com/kleinesfilmroellchen/esp-hal-smartled/blob/main/examples/hello_rgb.rs) for details.
 
 ## License
 
