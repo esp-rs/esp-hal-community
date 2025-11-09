@@ -17,15 +17,15 @@ document-features = "^0.2.12"
 # Unstable required for:
 # - ledc
 # - delay
-esp-hal           = { version = "1.0.0-rc.1", features = ["requires-unstable"] }
+esp-hal           = { version = "1.0.0", features = ["requires-unstable"] }
 
 [dev-dependencies]
 esp-backtrace = { version = "0.18", features = [
   "panic-handler",
   "println",
 ] }
-esp-bootloader-esp-idf = "0.3"
-esp-hal = { version = "1.0.0-rc.1", features = ["unstable"] }
+esp-bootloader-esp-idf = "0.4"
+esp-hal = { version = "1.0.0", features = ["unstable"] }
 esp-println = "0.16"
 
 [features]
