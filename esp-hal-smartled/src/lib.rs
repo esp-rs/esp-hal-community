@@ -172,41 +172,28 @@ pub mod color_order {
         fn get_channel_data(color: RGB8, channel: Channel) -> u8;
     }
 
-    /// [`ColorOrder`] RGB.
-    pub enum Rgb {}
-    impl ColorOrder for Rgb {
-        fn get_channel_data(color: RGB8, channel: Channel) -> u8 {
-            match channel {
-                Channel::First => color.r,
-                Channel::Second => color.g,
-                Channel::Third => color.b,
+    macro_rules! color_order {
+        ($name:ident => $first:ident, $second:ident, $third:ident) => {
+            #[doc = concat!("[`ColorOrder`] ", stringify!($name), ".")]
+            pub enum $name {}
+            impl ColorOrder for $name {
+                fn get_channel_data(color: RGB8, channel: Channel) -> u8 {
+                    match channel {
+                        Channel::First => color.$first,
+                        Channel::Second => color.$second,
+                        Channel::Third => color.$third,
+                    }
+                }
             }
-        }
+        };
     }
 
-    /// [`ColorOrder`] GRB.
-    pub enum Grb {}
-    impl ColorOrder for Grb {
-        fn get_channel_data(color: RGB8, channel: Channel) -> u8 {
-            match channel {
-                Channel::First => color.g,
-                Channel::Second => color.r,
-                Channel::Third => color.b,
-            }
-        }
-    }
-
-    /// [`ColorOrder`] BRG.
-    pub enum Brg {}
-    impl ColorOrder for Brg {
-        fn get_channel_data(color: RGB8, channel: Channel) -> u8 {
-            match channel {
-                Channel::First => color.b,
-                Channel::Second => color.r,
-                Channel::Third => color.g,
-            }
-        }
-    }
+    color_order!(Rgb => r, g, b);
+    color_order!(Rbg => r, b, g);
+    color_order!(Grb => g, r, b);
+    color_order!(Gbr => g, b, r);
+    color_order!(Brg => b, r, g);
+    color_order!(Bgr => b, g, r);
 }
 
 /// [`SmartLedsWrite`] driver implementation using the ESP32’s “remote control” (RMT) peripheral for hardware-offloaded, fast control of smart LEDs.
