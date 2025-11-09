@@ -464,20 +464,27 @@ where
     /// Convert all Color items of the iterator to the RMT format and
     /// add them to internal buffer, then start a singular RMT operation
     /// based on that buffer.
-    async fn write<T, I>(&mut self, iterator: T) -> Result<(), Self::Error>
+    fn write<T, I>(&mut self, iterator: T) -> impl Future<Output=Result<(), Self::Error>>
     where
         T: IntoIterator<Item = I>,
         I: Into<Self::Color>,
     {
-        self.create_rmt_data(iterator)?;
+        // we split the future into a creation part and a sending part
+        // so we can prepare multiple futures and send/await then all at the same time
+        let res = self.create_rmt_data(iterator);
 
-        // Perform the actual RMT operation. We use the u32 values here right away.
-        self.channel
-            .as_mut()
-            .unwrap()
-            .transmit(&self.rmt_buffer)
-            .await?;
-        Ok(())
+        async move {
+            if let Err(err) = res {
+                return Err(err);
+            }
+            // Perform the actual RMT operation. We use the u32 values here right away.
+            self.channel
+                .as_mut()
+                .unwrap()
+                .transmit(&self.rmt_buffer)
+                .await?;
+            Ok(())
+        }
     }
 }
 
