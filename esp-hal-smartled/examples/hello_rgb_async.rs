@@ -5,7 +5,7 @@
 //!
 //! It is the exact same as the `hello_rgb` example,
 //! except it uses the async driver on top of embassy.
-//! 
+//!
 //! Requires the `defmt` feature.
 
 //% CHIPS: esp32 esp32c3 esp32c6 esp32h2 esp32s2 esp32s3
@@ -14,6 +14,7 @@
 #![no_main]
 
 use embassy_executor::Spawner;
+use embassy_time::Timer;
 use esp_backtrace as _;
 use esp_hal::interrupt::software::SoftwareInterruptControl;
 use esp_hal::timer::timg::TimerGroup;
@@ -23,7 +24,6 @@ use smart_leds::{
     SmartLedsWriteAsync, brightness, gamma,
     hsv::{Hsv, hsv2rgb},
 };
-use embassy_time::Timer;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -60,12 +60,15 @@ async fn main(spawner: Spawner) -> ! {
     }
 
     let mut led = {
-        let rmt = Rmt::new(peripherals.RMT, freq).expect("Failed to initialize RMT0").into_async();
+        let rmt = Rmt::new(peripherals.RMT, freq)
+            .expect("Failed to initialize RMT0")
+            .into_async();
         // Configure color order and timing implementation as needed.
         SmartLedsAdapter::<{ buffer_size(1) }, Async, color_order::Rgb, Ws2812Timing>::new(
             rmt.channel0,
             led_pin,
         )
+        .unwrap()
     };
 
     let mut color = Hsv {
@@ -87,8 +90,9 @@ async fn main(spawner: Spawner) -> ! {
             // When sending to the LED, we do a gamma correction first (see smart_leds
             // documentation for details) and then limit the brightness to 10 out of 255 so
             // that the output it's not too bright.
-            led.write(brightness(gamma(data.iter().cloned()), 10)).
-                await.unwrap();
+            led.write(brightness(gamma(data.iter().cloned()), 10))
+                .await
+                .unwrap();
             Timer::after_millis(20).await;
         }
     }

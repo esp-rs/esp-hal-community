@@ -19,7 +19,7 @@
 //! ## Usage overview
 //!
 //! The [`SmartLedsAdapter`] struct implements [`SmartLedsWrite`]
-//! and can be used to send color data to connected LEDs
+//! and can be used to send color data to connected LEDs.
 //! To initialize a [`SmartLedsAdapter`], use [`SmartLedsAdapter::new`],
 //! which takes an RMT channel and a [`PeripheralOutput`].
 //! If you want to reuse the channel afterwards, you can use [`esp_hal::rmt::ChannelCreator::reborrow`] to create a shorter-lived derived channel.
@@ -232,7 +232,31 @@ where
     /// Note that calling this function usually requires you to specify the desired buffer size, [`ColorOrder`] and [`Timing`]. See the struct documentation for details.
     ///
     /// If you want to reuse the channel afterwards, you can use [`esp_hal::rmt::ChannelCreator::reborrow`] to create a shorter-lived derived channel.
-    pub fn new<C, P>(channel: C, pin: P) -> Self
+    ///
+    /// # Errors
+    ///
+    /// If any configuration issue with the RMT [`Channel`] occurs, the error will be returned.
+    pub fn new<C, P>(channel: C, pin: P) -> Result<Self, RmtError>
+    where
+        C: TxChannelCreator<'d, Mode>,
+        P: PeripheralOutput<'d>,
+    {
+        Self::new_with_memsize(channel, pin, 1)
+    }
+    /// Creates a new [`SmartLedsAdapter`] that drives the provided output using the given RMT channel.
+    ///
+    /// Note that calling this function usually requires you to specify the desired buffer size, [`ColorOrder`] and [`Timing`]. See the struct documentation for details.
+    ///
+    /// If you want to reuse the channel afterwards, you can use [`esp_hal::rmt::ChannelCreator::reborrow`] to create a shorter-lived derived channel.
+    ///
+    /// The `memsize` parameter determines how many RMT blocks this adapter will use.
+    /// If you use any value other than 1, other RMT channels will not be available, as their memory blocks will be used up by this driver.
+    /// However, this can allow you to control many more LEDs without issues.
+    ///
+    /// # Errors
+    ///
+    /// If any configuration issue with the RMT [`Channel`] occurs, the error will be returned.
+    pub fn new_with_memsize<C, P>(channel: C, pin: P, memsize: u8) -> Result<Self, RmtError>
     where
         C: TxChannelCreator<'d, Mode>,
         P: PeripheralOutput<'d>,
@@ -240,18 +264,18 @@ where
         let config = TxChannelConfig::default()
             .with_clk_divider(1)
             .with_idle_output_level(Level::Low)
-            .with_memsize(2)
+            .with_memsize(memsize)
             .with_carrier_modulation(false)
             .with_idle_output(true);
 
-        let channel = channel.configure_tx(pin, config).unwrap();
+        let channel = channel.configure_tx(pin, config)?;
 
         // Assume the RMT peripheral is set up to use the APB clock
         let clocks = Clocks::get();
         // convert to the MHz value to simplify nanosecond calculations
         let src_clock = clocks.apb_clock.as_hz() / 1_000_000;
 
-        Self {
+        Ok(Self {
             channel: Some(channel),
             rmt_buffer: [PulseCode::end_marker(); _],
             pulses: (
@@ -270,7 +294,7 @@ where
             ),
             _order: PhantomData,
             _timing: PhantomData,
-        }
+        })
     }
 
     fn convert_rgb_to_pulse(

@@ -69,10 +69,11 @@ fn main() -> ! {
     let mut led = {
         let rmt = Rmt::new(peripherals.RMT, freq).expect("Failed to initialize RMT0");
         // Configure color order and timing implementation as needed.
-        SmartLedsAdapter::<{ buffer_size(1) }, Blocking, color_order::Rgb, Ws2812Timing>::new(
+        SmartLedsAdapter::<{ buffer_size(1) }, Blocking, color_order::Rgb, Ws2812Timing>::new_with_memsize(
             rmt.channel0,
             led_pin,
-        )
+            2,
+        ).unwrap()
     };
     let delay = Delay::new();
 
