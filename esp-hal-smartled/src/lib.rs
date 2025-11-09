@@ -240,6 +240,7 @@ where
         let config = TxChannelConfig::default()
             .with_clk_divider(1)
             .with_idle_output_level(Level::Low)
+            .with_memsize(2)
             .with_carrier_modulation(false)
             .with_idle_output(true);
 
