@@ -9,7 +9,13 @@
 
 Allows for the use of an RMT output channel on the ESP32 family to easily drive smart RGB LEDs. This is a driver for the [smart-leds](https://crates.io/crates/smart-leds) framework and allows using the utility functions from this crate as well as higher-level libraries based on smart-leds.
 
-Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-rmt-driver), which is based on the unofficial `esp-idf` SDK, this crate is based on the official no-std [esp-hal](https://github.com/esp-rs/esp-hal).
+Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-rmt-driver), which is based on the unofficial `esp-idf` SDK, this crate is based on the official no-std [esp-hal](https://github.com/esp-rs/esp-hal). The RMT peripheral approach is common across many smart LED drivers on ESP32, like Arduino FastLED.
+
+## Features
+
+- **Configurability**: Use any color order and timing specification you want, either from the library itself, or your own. This makes `esp-hal-smartled2` compatible with many types of LEDs. Since both of these are determined at compile-time, the driver is always well-optimized for your specific LED type. (Currently, only RGB LEDs are supported, and RGBW/RGBWW/CC support might be added in the future.)
+- **Async support**: The async write trait of smart-leds is supported, allowing you to use the driver without waiting for the LED write to complete.
+- **No Allocation**: The driver uses only static buffers based on the maximum number of LEDs to drive, so you can use it without an allocator.
 
 ## [Documentation]
 
@@ -19,7 +25,7 @@ Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-r
 
 This crate is guaranteed to compile on whatever Rust version esp-hal requires, which is the latest stable version at the time of release. It _might_ compile with older versions but that may change in any new patch release.
 
-This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compatible with *exactly* esp-hal 1.0.0, as the peripheral API might change in any future release and is likely to go through significant changes before stabilization. In order to use this crate, you have to enable the `unstable` feature on esp-hal.
+This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compatible with _exactly_ esp-hal 1.0.0, as the peripheral API might change in any future release and is likely to go through significant changes before stabilization. In order to use this crate, you have to enable the `unstable` feature on esp-hal.
 
 ## License
 
