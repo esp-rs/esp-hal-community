@@ -1,9 +1,9 @@
 # esp-hal-smartled
 
-[![Crates.io](https://img.shields.io/crates/v/esp-hal-smartled?labelColor=1C2C2E&color=C96329&logo=Rust&style=flat-square)](https://crates.io/crates/esp-hal-smartled)
-[![docs.rs](https://img.shields.io/docsrs/esp-hal-smartled?labelColor=1C2C2E&color=C96329&logo=rust&style=flat-square)](https://docs.rs/esp-hal-smartled)
-![MSRV](https://img.shields.io/badge/MSRV-1.91-blue?labelColor=1C2C2E&style=flat-square)
-![Crates.io](https://img.shields.io/crates/l/esp-hal-smartled?labelColor=1C2C2E&style=flat-square)
+[![Crates.io](https://img.shields.io/crates/v/esp-hal-smartled2?labelColor=1C2C2E&color=C96329&logo=Rust&style=flat-square)](https://crates.io/crates/esp-hal-smartled2)
+[![docs.rs](https://img.shields.io/docsrs/esp-hal-smartled2?labelColor=1C2C2E&color=C96329&logo=rust&style=flat-square)](https://docs.rs/esp-hal-smartled2)
+![MSRV](https://img.shields.io/badge/MSRV-1.90-blue?labelColor=1C2C2E&style=flat-square)
+![Crates.io](https://img.shields.io/crates/l/esp-hal-smartled2?labelColor=1C2C2E&style=flat-square)
 
 > **NOTE:** This is an enhanced up-to-date fork of [esp-hal-smartled](https://crates.io/crates/esp-hal-smartled), which seems abandoned at the time of writing. Users of `esp-hal-smartled` can migrate to `esp-hal-smartled2` with minimal effort. If possible, this crate’s features will be merged into `esp-hal-smartled`.
 
@@ -13,7 +13,7 @@ Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-r
 
 ## [Documentation]
 
-[documentation]: https://docs.rs/esp-hal-smartled/
+[documentation]: https://docs.rs/esp-hal-smartled2/
 
 ## Compatibility
 
