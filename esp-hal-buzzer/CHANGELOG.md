@@ -5,13 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
-
 ## 0.3.0
 
 ### Changed
 
-- Updated `esp-hal` to `v1.0.0-rc.1` and updated related dependencies, including breaking changes for `esp_hal::gpio::DriveMode`. See the [esp-hal 1.0.0-rc.0 migration guide](https://github.com/esp-rs/esp-hal/blob/main/esp-hal/MIGRATING-1.0.0-rc.0.md) for details (#53)
+- Updated `esp-hal` to `v1.0.0` and updated related dependencies, including breaking changes for `esp_hal::gpio::DriveMode`. (#53, #57)
 - Changed the pin in the example to GPIO4 (#53)
 
 ## 0.2.0
