@@ -38,13 +38,13 @@ This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compa
 ### Migration
 
 - `0.27`
-  - `SmartLedsAdapter` and `buffer_size` now take a `Color` type parameter (after the transmit mode). This allows you to use color types other than RGB8, including ones with larger bit widths. `Rgb8SmartLedsAdapter` is a convenience alias for common RGB8-based LEDs, and works like `SmartLedsAdapter` did before.
+  - `RmtSmartLeds` and `buffer_size` now take a `Color` type parameter (after the transmit mode). This allows you to use color types other than RGB8, including ones with larger bit widths. `Rgb8RmtSmartLeds` is a convenience alias for common RGB8-based LEDs, and works like `RmtSmartLeds` did before.
   - `ColorOrder` is now a generic trait over a color type, since some color orders work with multiple color types (e.g. all RGB orders work with all RGB color types, regardless of bit width). The existing order types work as before.
   - `Channel` has been removed, as the channel count can now be larger or smaller depending on the color type. Since this is not really enforceable at compile time, care must be taken when passing channel numbers to `ColorOrder::get_channel_data()`.
   - Async implementation cooperates better with parallelization. When you call the async `write` function now, it immediately prepares the driver for sending. The actual send is still only dispatched once you `await` it. The rewritten async example shows how this can be used in practice to prepare the buffer in advance, and dispatch multiple LED writes simultaneously using `join`.
 - `0.26`
-  - `SmartLedsAdapter::new` now returns `Result<SmartLedsAdapter, RmtError>`, so that you can handle configuration errors if desired.
-  - `SmartLedsAdapter::new_with_memsize` was added to specify a larger RMT memory size when desired.
+  - `RmtSmartLeds::new` now returns `Result<RmtSmartLeds, RmtError>`, so that you can handle configuration errors if desired.
+  - `RmtSmartLeds::new_with_memsize` was added to specify a larger RMT memory size when desired.
 - `0.25`
   - WS2811 timings have been changed to use fast timings instead of slow timings; slow timings are still available through `Ws2811LowSpeedTiming`. If you experience issues with WS2811, switch to the low-speed timing.
 - `0.24`

@@ -19,7 +19,7 @@
 //! The following wiring is assumed for ESP32S3:
 //! - LED => GPIO48
 //!
-//! You might need to adjust the color order and timing types during the [`SmartLedsAdapter`] initialization,
+//! You might need to adjust the color order and timing types during the [`RmtSmartLeds`] initialization,
 //! depending on what your board exactly has.
 
 //% CHIPS: esp32 esp32c3 esp32c6 esp32h2 esp32s2 esp32s3
@@ -29,7 +29,7 @@
 
 use esp_backtrace as _;
 use esp_hal::{Blocking, delay::Delay, rmt::Rmt, time::Rate};
-use esp_hal_smartled::{SmartLedsAdapter, Ws2812Timing, buffer_size, color_order};
+use esp_hal_smartled::{RmtSmartLeds, Ws2812Timing, buffer_size, color_order};
 use smart_leds::{
     RGB8, SmartLedsWrite, brightness, gamma,
     hsv::{Hsv, hsv2rgb},
@@ -70,7 +70,7 @@ fn main() -> ! {
     let mut led = {
         let rmt = Rmt::new(peripherals.RMT, freq).expect("Failed to initialize RMT0");
         // Configure color order and timing implementation as needed.
-        SmartLedsAdapter::<{ buffer_size::<RGB8>(1) }, _, RGB8, color_order::Rgb, Ws2812Timing>::new_with_memsize(
+        RmtSmartLeds::<{ buffer_size::<RGB8>(1) }, _, RGB8, color_order::Rgb, Ws2812Timing>::new_with_memsize(
             rmt.channel0,
             led_pin,
             2,

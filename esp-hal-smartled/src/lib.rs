@@ -2,14 +2,14 @@
 //!
 //! Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-rmt-driver), which is based on the unofficial `esp-idf` SDK, this crate is based on the official no-std [esp-hal](https://github.com/esp-rs/esp-hal).
 //!
-//! This driver uses the blocking RMT API, which is not suitable for use in async code. The [`SmartLedsWrite`] trait is implemented for [`SmartLedsAdapter`] only if a [`Blocking`] RMT channel is passed.
+//! This driver uses the blocking RMT API, which is not suitable for use in async code. The [`SmartLedsWrite`] trait is implemented for [`RmtSmartLeds`] only if a [`Blocking`] RMT channel is passed.
 //!
 //! ## Example
 //!
 //! ```rust,ignore
 //! let rmt = Rmt::new(peripherals.RMT, Rate::from_mhz(80)).unwrap();
 //!
-//! let mut led = SmartLedsAdapter::<{ buffer_size::<RGB8>(1) }, _, RGB8, color_order::Rgb, Ws2812Timing>::new(
+//! let mut led = RmtSmartLeds::<{ buffer_size::<RGB8>(1) }, _, RGB8, color_order::Rgb, Ws2812Timing>::new(
 //!     rmt.channel0, peripherals.GPIO2
 //! );
 //!
@@ -18,12 +18,12 @@
 //!
 //! ## Usage overview
 //!
-//! The [`SmartLedsAdapter`] struct implements [`SmartLedsWrite`]
+//! The [`RmtSmartLeds`] struct implements [`SmartLedsWrite`]
 //! and can be used to send color data to connected LEDs.
-//! To initialize a [`SmartLedsAdapter`], use [`SmartLedsAdapter::new`],
+//! To initialize a [`RmtSmartLeds`], use [`RmtSmartLeds::new`],
 //! which takes an RMT channel and a [`PeripheralOutput`].
 //! If you want to reuse the channel afterwards, you can use [`esp_hal::rmt::ChannelCreator::reborrow`] to create a shorter-lived derived channel.
-//! [`SmartLedsAdapter`] is configured at compile-time to support a variety of LED configurations. See the documentation for [`SmartLedsAdapter`] for more info.
+//! [`RmtSmartLeds`] is configured at compile-time to support a variety of LED configurations. See the documentation for [`RmtSmartLeds`] for more info.
 //!
 //! ## Features
 //!
@@ -118,7 +118,7 @@ impl Timing for Ws2811Timing {
 pub enum AdapterError {
     /// Raised in the event that the RMT buffer is not large enough.
     ///
-    /// This almost always points to an issue with the `BUFFER_SIZE` parameter of [`SmartLedsAdapter`].
+    /// This almost always points to an issue with the `BUFFER_SIZE` parameter of [`RmtSmartLeds`].
     /// You should create this parameter using [`buffer_size`], passing in the desired number of LEDs that will be controlled.
     BufferSizeExceeded,
     /// Raised if something goes wrong in the transmission. This contains the inner HAL error ([`RmtError`]).
@@ -188,13 +188,13 @@ where
 }
 
 /// Calculate the required buffer size for a certain number of LEDs.
-/// This should be used to create the `BUFFER_SIZE` parameter of [`SmartLedsAdapter`].
+/// This should be used to create the `BUFFER_SIZE` parameter of [`RmtSmartLeds`].
 ///
 /// Attempting to use more LEDs that the buffer is configured for will result in
 /// an [`AdapterError::BufferSizeExceeded`] error.
 ///
 /// You need to specify the correct color and channel type
-// TODO: As soon as generic expressions are more stabilized, we should be able to do this calculation entirely internally in `SmartLedsAdapter`. For now, users have to be careful.
+// TODO: As soon as generic expressions are more stabilized, we should be able to do this calculation entirely internally in `RmtSmartLeds`. For now, users have to be careful.
 pub const fn buffer_size<C: Color>(led_count: usize) -> usize
 where
 {
@@ -292,7 +292,7 @@ pub mod color_order {
 ///   It is however recommended to use the corresponding LED type, or implement your own when needed.
 ///
 /// When the driver move is [`Blocking`], this type implements the blocking [`SmartLedsWrite`] interface. An async interface for [`esp_hal::Async`] may be added in the future. (You usually don’t need to choose this manually, Rust can deduce it from the passed-in RMT channel.)
-pub struct SmartLedsAdapter<'d, const BUFFER_SIZE: usize, Mode, C, Order, Timing>
+pub struct RmtSmartLeds<'d, const BUFFER_SIZE: usize, Mode, C, Order, Timing>
 where
     Mode: DriverMode,
     C: Color,
@@ -307,19 +307,19 @@ where
     _color: PhantomData<C>,
 }
 
-/// A [`SmartLedsAdapter`] specifically for 8-bit RGB colors, which is what most smart LEDs use.
-pub type Rgb8SmartLedsAdapter<'d, const BUFFER_SIZE: usize, Mode, Order, Timing> =
-    SmartLedsAdapter<'d, BUFFER_SIZE, Mode, RGB8, Order, Timing>;
+/// A [`RmtSmartLeds`] specifically for 8-bit RGB colors, which is what most smart LEDs use.
+pub type Rgb8RmtSmartLeds<'d, const BUFFER_SIZE: usize, Mode, Order, Timing> =
+    RmtSmartLeds<'d, BUFFER_SIZE, Mode, RGB8, Order, Timing>;
 
 impl<'d, const BUFFER_SIZE: usize, Mode, C, Order, Timing>
-    SmartLedsAdapter<'d, BUFFER_SIZE, Mode, C, Order, Timing>
+    RmtSmartLeds<'d, BUFFER_SIZE, Mode, C, Order, Timing>
 where
     Mode: DriverMode,
     C: Color,
     Order: ColorOrder<C>,
     Timing: crate::Timing,
 {
-    /// Creates a new [`SmartLedsAdapter`] that drives the provided output using the given RMT channel.
+    /// Creates a new [`RmtSmartLeds`] that drives the provided output using the given RMT channel.
     ///
     /// Note that calling this function usually requires you to specify the desired buffer size, [`ColorOrder`] and [`Timing`]. See the struct documentation for details.
     ///
@@ -335,7 +335,7 @@ where
     {
         Self::new_with_memsize(channel, pin, 1)
     }
-    /// Creates a new [`SmartLedsAdapter`] that drives the provided output using the given RMT channel.
+    /// Creates a new [`RmtSmartLeds`] that drives the provided output using the given RMT channel.
     ///
     /// Note that calling this function usually requires you to specify the desired buffer size, [`ColorOrder`] and [`Timing`]. See the struct documentation for details.
     ///
@@ -413,7 +413,7 @@ where
 }
 
 impl<'d, const BUFFER_SIZE: usize, C, Order, Timing> SmartLedsWrite
-    for SmartLedsAdapter<'d, BUFFER_SIZE, Blocking, C, Order, Timing>
+    for RmtSmartLeds<'d, BUFFER_SIZE, Blocking, C, Order, Timing>
 where
     C: Color,
     Order: ColorOrder<C>,
@@ -452,7 +452,7 @@ where
 }
 
 impl<'d, const BUFFER_SIZE: usize, C, Order, Timing> SmartLedsWriteAsync
-    for SmartLedsAdapter<'d, BUFFER_SIZE, Async, C, Order, Timing>
+    for RmtSmartLeds<'d, BUFFER_SIZE, Async, C, Order, Timing>
 where
     C: Color,
     Order: ColorOrder<C>,
