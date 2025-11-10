@@ -20,6 +20,7 @@ use esp_hal::interrupt::software::SoftwareInterruptControl;
 use esp_hal::timer::timg::TimerGroup;
 use esp_hal::{Async, Blocking, delay::Delay, rmt::Rmt, time::Rate};
 use esp_hal_smartled::{SmartLedsAdapter, Ws2812Timing, buffer_size, color_order};
+use smart_leds::RGB8;
 use smart_leds::{
     SmartLedsWriteAsync, brightness, gamma,
     hsv::{Hsv, hsv2rgb},
@@ -64,11 +65,10 @@ async fn main(spawner: Spawner) -> ! {
             .expect("Failed to initialize RMT0")
             .into_async();
         // Configure color order and timing implementation as needed.
-        SmartLedsAdapter::<{ buffer_size(1) }, Async, color_order::Rgb, Ws2812Timing>::new(
+        SmartLedsAdapter::<{ buffer_size::<RGB8>(1) }, _, RGB8, color_order::Rgb, Ws2812Timing>::new(
             rmt.channel0,
             led_pin,
-        )
-        .unwrap()
+        ).unwrap()
     };
 
     let mut color = Hsv {

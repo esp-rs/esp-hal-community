@@ -5,7 +5,7 @@
 ![MSRV](https://img.shields.io/badge/MSRV-1.90-blue?labelColor=1C2C2E&style=flat-square)
 ![Crates.io](https://img.shields.io/crates/l/esp-hal-smartled2?labelColor=1C2C2E&style=flat-square)
 
-> **NOTE:** This is an enhanced up-to-date fork of [esp-hal-smartled](https://crates.io/crates/esp-hal-smartled), which seems abandoned at the time of writing. Users of `esp-hal-smartled` can migrate to `esp-hal-smartled2` with minimal effort. If possible, this crate’s features will be merged into `esp-hal-smartled`.
+> **NOTE:** This is an enhanced up-to-date fork of [esp-hal-smartled](https://crates.io/crates/esp-hal-smartled), which seems abandoned. Users of `esp-hal-smartled` can migrate to `esp-hal-smartled2` with some effort.
 
 Allows for the use of an RMT output channel on the ESP32 family to easily drive smart RGB LEDs. This is a driver for the [smart-leds](https://crates.io/crates/smart-leds) framework and allows using the utility functions from this crate as well as higher-level libraries based on smart-leds.
 
@@ -13,8 +13,14 @@ Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-r
 
 ## Features
 
-- **Configurability**: Use any color order and timing specification you want, either from the library itself, or your own. This makes `esp-hal-smartled2` compatible with many types of LEDs. Since both of these are determined at compile-time, the driver is always well-optimized for your specific LED type. (Currently, only RGB LEDs are supported, and RGBW/RGBWW/CC support might be added in the future.)
-- **Async support**: The async write trait of smart-leds is supported, allowing you to use the driver without waiting for the LED write to complete.
+- **Configurability**: `esp-hal-smartled2` works with:
+  - any (plausible) `smart-led` color type, including RGB, RGBW, RGBCCT, CCT, in 8, 16, 32 or 64 bits.
+  - any color order; all six RGB orders are predefined.
+  - any timing specification (within range of the RMT peripheral); common LED types have predefined timings, but custom ones are supported.
+
+  This makes `esp-hal-smartled2` compatible with many configurations of LEDs, and almost the entire `smart-leds` featureset. Since all of these are determined at compile-time, the driver is always well-optimized for your specific LED type.
+
+- **Async support**: The `SmartLedsWriteAsync` trait of smart-leds is supported, allowing you to use the driver without waiting for the LED write to complete.
 - **No Allocation**: The driver uses only static buffers based on the maximum number of LEDs to drive, so you can use it without an allocator.
 
 ## [Documentation]
@@ -31,6 +37,10 @@ This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compa
 
 ### Migration
 
+- `0.27`
+  - `SmartLedsAdapter` and `buffer_size` now take a `Color` type parameter (after the transmit mode). This allows you to use color types other than RGB8, including ones with larger bit widths. `Rgb8SmartLedsAdapter` is a convenience alias for common RGB8-based LEDs, and works like `SmartLedsAdapter` did before.
+  - `ColorOrder` is now a generic trait over a color type, since some color orders work with multiple color types (e.g. all RGB orders work with all RGB color types, regardless of bit width). The existing order types work as before.
+  - `Channel` has been removed, as the channel count can now be larger or smaller depending on the color type. Since this is not really enforceable at compile time, care must be taken when passing channel numbers to `ColorOrder::get_channel_data()`.
 - `0.26`
   - `SmartLedsAdapter::new` now returns `Result<SmartLedsAdapter, RmtError>`, so that you can handle configuration errors if desired.
   - `SmartLedsAdapter::new_with_memsize` was added to specify a larger RMT memory size when desired.
@@ -42,6 +52,14 @@ This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compa
   - `SmartLedAdapter` now takes type parameters describing the timing and LED buffer size.
   - It is no longer needed to allocate a separate buffer and pass it into `new`. The `smartLedBuffer!` macro has been removed, and the `buffer_size` function can be used instead to calculate the correct buffer size.
   - Have a look at the documentation or the [example](https://github.com/kleinesfilmroellchen/esp-hal-smartled/blob/main/examples/hello_rgb.rs) for details.
+
+### Future features
+
+- Release a version 1 once the RMT peripheral is stable.
+- LED data streaming via continuous RMT transmission. This would massively improve the throughput of the driver, especially for large LED counts. It needs support on the RMT peripheral side in `esp-hal`, where such work is explicitly planned.
+- `embedded-graphics` support by treating the LED chain as a 2D display.
+
+If you really need one of them, please tell me about it!
 
 ## License
 
