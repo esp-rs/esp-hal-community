@@ -14,6 +14,7 @@
 #![no_main]
 
 use embassy_executor::Spawner;
+use embassy_futures::join::join;
 use embassy_time::Timer;
 use esp_backtrace as _;
 use esp_hal::interrupt::software::SoftwareInterruptControl;
@@ -60,12 +61,15 @@ async fn main(spawner: Spawner) -> ! {
         }
     }
 
+    // Increase LED count as needed.
+    const LEDS: usize = 1;
+
     let mut led = {
         let rmt = Rmt::new(peripherals.RMT, freq)
             .expect("Failed to initialize RMT0")
             .into_async();
         // Configure color order and timing implementation as needed.
-        SmartLedsAdapter::<{ buffer_size::<RGB8>(1) }, _, RGB8, color_order::Rgb, Ws2812Timing>::new(
+        SmartLedsAdapter::<{ buffer_size::<RGB8>(LEDS) }, _, RGB8, color_order::Rgb, Ws2812Timing>::new(
             rmt.channel0,
             led_pin,
         ).unwrap()
@@ -86,14 +90,19 @@ async fn main(spawner: Spawner) -> ! {
             color.hue = hue;
             // Convert from the HSV color space (where we can easily transition from one
             // color to the other) to the RGB color space that we can then send to the LED
-            data = [hsv2rgb(color)];
+            data = [hsv2rgb(color); LEDS];
             // When sending to the LED, we do a gamma correction first (see smart_leds
             // documentation for details) and then limit the brightness to 10 out of 255 so
             // that the output it's not too bright.
-            led.write(brightness(gamma(data.iter().cloned()), 10))
-                .await
-                .unwrap();
-            Timer::after_millis(20).await;
+
+            // This call already prepares the buffer.
+            let fut = led.write(brightness(gamma(data.iter().cloned()), 10));
+            // Put more led.write() calls (for other drivers) and other peripheral preparations here...
+
+            // Dispatch all the LED writes at once.
+            // (We simulate the second write instead with a delay.)
+            let (_, res) = join(Timer::after_millis(20), fut).await;
+            res.unwrap();
         }
     }
 }

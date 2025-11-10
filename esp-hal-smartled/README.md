@@ -41,6 +41,7 @@ This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compa
   - `SmartLedsAdapter` and `buffer_size` now take a `Color` type parameter (after the transmit mode). This allows you to use color types other than RGB8, including ones with larger bit widths. `Rgb8SmartLedsAdapter` is a convenience alias for common RGB8-based LEDs, and works like `SmartLedsAdapter` did before.
   - `ColorOrder` is now a generic trait over a color type, since some color orders work with multiple color types (e.g. all RGB orders work with all RGB color types, regardless of bit width). The existing order types work as before.
   - `Channel` has been removed, as the channel count can now be larger or smaller depending on the color type. Since this is not really enforceable at compile time, care must be taken when passing channel numbers to `ColorOrder::get_channel_data()`.
+  - Async implementation cooperates better with parallelization. When you call the async `write` function now, it immediately prepares the driver for sending. The actual send is still only dispatched once you `await` it. The rewritten async example shows how this can be used in practice to prepare the buffer in advance, and dispatch multiple LED writes simultaneously using `join`.
 - `0.26`
   - `SmartLedsAdapter::new` now returns `Result<SmartLedsAdapter, RmtError>`, so that you can handle configuration errors if desired.
   - `SmartLedsAdapter::new_with_memsize` was added to specify a larger RMT memory size when desired.
