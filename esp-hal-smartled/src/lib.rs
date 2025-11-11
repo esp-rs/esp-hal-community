@@ -416,6 +416,7 @@ where
 
     /// Write pixel buffer data at certain LED index.
     /// Does not actually write data to the RMT peripheral.
+    #[allow(unused)]
     pub(crate) fn write_pixel_data(
         &mut self,
         index: usize,

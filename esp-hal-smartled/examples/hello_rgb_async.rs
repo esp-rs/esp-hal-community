@@ -19,7 +19,7 @@ use embassy_time::Timer;
 use esp_backtrace as _;
 use esp_hal::interrupt::software::SoftwareInterruptControl;
 use esp_hal::timer::timg::TimerGroup;
-use esp_hal::{Async, Blocking, delay::Delay, rmt::Rmt, time::Rate};
+use esp_hal::{rmt::Rmt, time::Rate};
 use esp_hal_smartled::{RmtSmartLeds, Ws2812Timing, buffer_size, color_order};
 use smart_leds::RGB8;
 use smart_leds::{
@@ -72,7 +72,8 @@ async fn main(spawner: Spawner) -> ! {
         RmtSmartLeds::<{ buffer_size::<RGB8>(LEDS) }, _, RGB8, color_order::Rgb, Ws2812Timing>::new(
             rmt.channel0,
             led_pin,
-        ).unwrap()
+        )
+        .unwrap()
     };
 
     let mut color = Hsv {
