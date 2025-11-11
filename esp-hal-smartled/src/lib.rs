@@ -36,7 +36,7 @@
 #![deny(missing_docs)]
 #![no_std]
 
-use core::{fmt::Debug, marker::PhantomData, slice::IterMut};
+use core::{fmt::Debug, marker::PhantomData};
 
 pub use color_order::ColorOrder;
 use esp_hal::{
@@ -373,16 +373,19 @@ where
         // convert to the MHz value to simplify nanosecond calculations
         let src_clock = clocks.apb_clock.as_hz() / 1_000_000;
 
+        let zero_pulse = PulseCode::new(
+            Level::High,
+            ((Timing::TIME_0_HIGH as u32 * src_clock) / 1000) as u16,
+            Level::Low,
+            ((Timing::TIME_0_LOW as u32 * src_clock) / 1000) as u16,
+        );
+        let mut rmt_buffer = [zero_pulse; _];
+        rmt_buffer[BUFFER_SIZE - 1] = PulseCode::end_marker();
         Ok(Self {
             channel: Some(channel),
-            rmt_buffer: [PulseCode::end_marker(); _],
+            rmt_buffer,
             pulses: (
-                PulseCode::new(
-                    Level::High,
-                    ((Timing::TIME_0_HIGH as u32 * src_clock) / 1000) as u16,
-                    Level::Low,
-                    ((Timing::TIME_0_LOW as u32 * src_clock) / 1000) as u16,
-                ),
+                zero_pulse,
                 PulseCode::new(
                     Level::High,
                     ((Timing::TIME_1_HIGH as u32 * src_clock) / 1000) as u16,
@@ -416,6 +419,50 @@ where
 
         Ok(())
     }
+
+    /// Write pixel buffer data at certain LED index.
+    /// Does not actually write data to the RMT peripheral.
+    pub(crate) fn write_pixel_data(
+        &mut self,
+        index: usize,
+        color: impl Into<C>,
+    ) -> Result<(), AdapterError> {
+        let buffer_start_index = index * C::CHANNELS as usize * (size_of::<C::ChannelType>() * 8);
+        let mut buffer_iter = self
+            .rmt_buffer
+            .get_mut(buffer_start_index..)
+            .ok_or(AdapterError::BufferSizeExceeded)?
+            .iter_mut();
+        convert_colors_to_pulse::<_, Order>(&color.into(), &mut buffer_iter, self.pulses)
+    }
+}
+
+impl<'d, const BUFFER_SIZE: usize, C, Order, Timing>
+    RmtSmartLeds<'d, BUFFER_SIZE, Blocking, C, Order, Timing>
+where
+    C: Color,
+    Order: ColorOrder<C>,
+    Timing: crate::Timing,
+{
+    /// Transmit existing LED data via the RMT peripheral.
+    pub fn flush(&mut self) -> Result<(), AdapterError> {
+        // Perform the actual RMT operation. We use the u32 values here right away.
+        let channel = self.channel.take().unwrap();
+        // TODO: If the transmit fails, we’re in an unsafe state and future calls to write() will panic.
+        // This is currently unavoidable since transmit consumes the channel on error.
+        // This is a known design flaw in the current RMT API and will be fixed soon.
+        // We should adjust our usage accordingly as soon as possible.
+        match channel.transmit(&self.rmt_buffer)?.wait() {
+            Ok(chan) => {
+                self.channel = Some(chan);
+                Ok(())
+            }
+            Err((e, chan)) => {
+                self.channel = Some(chan);
+                Err(AdapterError::TransmissionError(e))
+            }
+        }
+    }
 }
 
 impl<'d, const BUFFER_SIZE: usize, C, Order, Timing> SmartLedsWrite
@@ -437,23 +484,7 @@ where
         I: Into<Self::Color>,
     {
         self.create_rmt_data(iterator)?;
-
-        // Perform the actual RMT operation. We use the u32 values here right away.
-        let channel = self.channel.take().unwrap();
-        // TODO: If the transmit fails, we’re in an unsafe state and future calls to write() will panic.
-        // This is currently unavoidable since transmit consumes the channel on error.
-        // This is a known design flaw in the current RMT API and will be fixed soon.
-        // We should adjust our usage accordingly as soon as possible.
-        match channel.transmit(&self.rmt_buffer)?.wait() {
-            Ok(chan) => {
-                self.channel = Some(chan);
-                Ok(())
-            }
-            Err((e, chan)) => {
-                self.channel = Some(chan);
-                Err(AdapterError::TransmissionError(e))
-            }
-        }
+        self.flush()
     }
 }
 
@@ -492,9 +523,9 @@ where
     }
 }
 
-fn convert_colors_to_pulse<C, Order>(
+fn convert_colors_to_pulse<'a, C, Order>(
     value: &C,
-    mut_iter: &mut IterMut<PulseCode>,
+    mut_iter: &mut impl Iterator<Item = &'a mut PulseCode>,
     pulses: (PulseCode, PulseCode),
 ) -> Result<(), AdapterError>
 where
@@ -508,9 +539,9 @@ where
     Ok(())
 }
 
-fn convert_channel_to_pulses<N>(
+fn convert_channel_to_pulses<'a, N>(
     channel_value: N,
-    mut_iter: &mut IterMut<PulseCode>,
+    mut_iter: &mut impl Iterator<Item = &'a mut PulseCode>,
     pulses: (PulseCode, PulseCode),
 ) -> Result<(), AdapterError>
 where

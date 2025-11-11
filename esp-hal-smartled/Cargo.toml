@@ -95,6 +95,7 @@ esp-hal = { version = "=1.0.0", features = ["unstable"] }
 esp-rtos = { version = "0.2", features = ["embassy"] }
 esp-backtrace = { version = "0.18", features = ["panic-handler", "println"] }
 esp-println = { version = "0.16", features = ["defmt-espflash", "auto"] }
+embedded-graphics = { version = "0.8" }
 esp-bootloader-esp-idf = { version = "0.4.0" }
 smart-leds = "0.4"
 cfg-if = "1"

@@ -37,6 +37,8 @@ This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compa
 
 ### Migration
 
+- `0.28`
+  - Renamed the driver from `SmartLedsAdapter` to the more descriptive `RmtSmartLeds` to emphasize the use of the RMT peripheral.
 - `0.27`
   - `RmtSmartLeds` and `buffer_size` now take a `Color` type parameter (after the transmit mode). This allows you to use color types other than RGB8, including ones with larger bit widths. `Rgb8RmtSmartLeds` is a convenience alias for common RGB8-based LEDs, and works like `RmtSmartLeds` did before.
   - `ColorOrder` is now a generic trait over a color type, since some color orders work with multiple color types (e.g. all RGB orders work with all RGB color types, regardless of bit width). The existing order types work as before.
@@ -58,7 +60,6 @@ This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compa
 
 - Release a version 1 once the RMT peripheral is stable.
 - LED data streaming via continuous RMT transmission. This would massively improve the throughput of the driver, especially for large LED counts. It needs support on the RMT peripheral side in `esp-hal`, where such work is explicitly planned.
-- `embedded-graphics` support by treating the LED chain as a 2D display.
 
 If you really need one of them, please tell me about it!
 
