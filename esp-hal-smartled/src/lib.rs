@@ -2,7 +2,8 @@
 //!
 //! Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-rmt-driver), which is based on the unofficial `esp-idf` SDK, this crate is based on the official no-std [esp-hal](https://github.com/esp-rs/esp-hal).
 //!
-//! This driver uses the blocking RMT API, which is not suitable for use in async code. The [`SmartLedsWrite`] trait is implemented for [`RmtSmartLeds`] only if a [`Blocking`] RMT channel is passed.
+//! This driver uses either the blocking RMT API, or the async one, depending on the given RMT channel.
+//! The [`SmartLedsWrite`] trait (or [`SmartLedsWriteAsync`]) is implemented for [`RmtSmartLeds`] with the corresponding channel mode.
 //!
 //! ## Example
 //!
@@ -18,7 +19,7 @@
 //!
 //! ## Usage overview
 //!
-//! The [`RmtSmartLeds`] struct implements [`SmartLedsWrite`]
+//! The [`RmtSmartLeds`] struct implements [`SmartLedsWrite`] or [`SmartLedsWriteAsync`]
 //! and can be used to send color data to connected LEDs.
 //! To initialize a [`RmtSmartLeds`], use [`RmtSmartLeds::new`],
 //! which takes an RMT channel and a [`PeripheralOutput`].
@@ -28,8 +29,6 @@
 //! ## Features
 //!
 //! - `defmt`: Derive [`defmt::Format`] on some types.
-//! - `embedded-graphics`: Enable [`RmtSmartLedsGraphics`], which implements an [`embedded_graphics`](`embedded_graphics_core`) display driver.
-//!   This allows you to use the smart LEDs in a 2D matrix with the `embedded-graphics` system.
 //!
 //! Other features provided by this crate are not for external use, they are only used for testing and examples.
 #![doc(html_logo_url = "https://avatars.githubusercontent.com/u/46717278")]
@@ -49,11 +48,6 @@ use num_traits::Unsigned;
 use smart_leds_trait::{
     CctWhite, RGB, RGB8, RGBCCT, RGBW, SmartLedsWrite, SmartLedsWriteAsync, White,
 };
-
-#[cfg(feature = "embedded-graphics")]
-pub mod graphics;
-#[cfg(feature = "embedded-graphics")]
-pub use graphics::RmtSmartLedsGraphics;
 
 /// Common trait for all different smart LED dependent timings.
 ///

@@ -14,6 +14,7 @@ Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-r
 ## Features
 
 - **Configurability**: `esp-hal-smartled2` works with:
+
   - any (plausible) `smart-led` color type, including RGB, RGBW, RGBCCT, CCT, in 8, 16, 32 or 64 bits.
   - any color order; all six RGB orders are predefined.
   - any timing specification (within range of the RMT peripheral); common LED types have predefined timings, but custom ones are supported.
@@ -22,6 +23,7 @@ Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-r
 
 - **Async support**: The `SmartLedsWriteAsync` trait of smart-leds is supported, allowing you to use the driver without waiting for the LED write to complete.
 - **No Allocation**: The driver uses only static buffers based on the maximum number of LEDs to drive, so you can use it without an allocator.
+- **`smart-leds` and `embedded-graphics` ecosystem**: Thanks to implementing `smart-leds`, this crate allows you to write and use generic code compatible with any smart-leds driver. Furthermore, using [`smart-leds-matrix`](https://docs.rs/smart-leds-matrix/latest/smart_leds_matrix/), you can set up a 2D LED matrix using this driver and use it with the 2D graphics routines from [`embedded-graphics`](https://docs.rs/embedded-graphics/latest/embedded_graphics/) and its ecosystem. Note that this is only supported for RGB LED strips.
 
 ## [Documentation]
 
@@ -39,6 +41,7 @@ This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compa
 
 - `0.28`
   - Renamed the driver from `SmartLedsAdapter` to the more descriptive `RmtSmartLeds` to emphasize the use of the RMT peripheral.
+  - New `SmartLedsAdapter::flush` function that sends the previously created RMT data again (only in blocking mode).
 - `0.27`
   - `RmtSmartLeds` and `buffer_size` now take a `Color` type parameter (after the transmit mode). This allows you to use color types other than RGB8, including ones with larger bit widths. `Rgb8RmtSmartLeds` is a convenience alias for common RGB8-based LEDs, and works like `RmtSmartLeds` did before.
   - `ColorOrder` is now a generic trait over a color type, since some color orders work with multiple color types (e.g. all RGB orders work with all RGB color types, regardless of bit width). The existing order types work as before.
