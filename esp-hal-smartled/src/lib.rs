@@ -211,7 +211,7 @@ pub const fn buffer_size<C: Color>(led_count: usize) -> usize {
 /// Common [`ColorOrder`] implementations.
 pub mod color_order {
     use num_traits::Unsigned;
-    use smart_leds_trait::{RGB, RGBW};
+    use smart_leds_trait::{RGB, RGBW, White};
 
     use crate::Color;
 
@@ -273,6 +273,17 @@ pub mod color_order {
             }
         }
     }
+
+    /// [`ColorOrder`] for single-channel smart LEDs, where the order is trivial.
+    pub enum SingleChannel {}
+    impl<T> ColorOrder<White<T>> for SingleChannel
+    where
+        T: Copy + Unsigned + Into<usize>,
+    {
+        fn get_channel_data(color: &White<T>, _channel: u8) -> T {
+            color.0
+        }
+    }
 }
 
 /// [`SmartLedsWrite`] driver implementation using the ESP32’s “remote control” (RMT) peripheral for hardware-offloaded, fast control of smart LEDs.
@@ -291,7 +302,11 @@ pub mod color_order {
 ///   Note that many WS2812-like LEDs are at least almost compatible in their timing, even though the datasheets specify different amounts, the other LEDs’ values are within the tolerance range, and even exceeding these, many LEDs continue to work beyond their specified timing range.
 ///   It is however recommended to use the corresponding LED type, or implement your own when needed.
 ///
-/// When the driver move is [`Blocking`], this type implements the blocking [`SmartLedsWrite`] interface. An async interface for [`esp_hal::Async`] may be added in the future. (You usually don’t need to choose this manually, Rust can deduce it from the passed-in RMT channel.)
+/// When the driver mode is [`Blocking`], this type implements the blocking [`SmartLedsWrite`] interface.
+/// When the driver mode is [`Async`], this type implements the [`SmartLedsWriteAsync`] interface instead.
+/// (You usually don’t need to choose this manually, Rust can deduce it from the passed-in RMT channel.)
+///
+/// Some common configurations have predefined aliases: [`Ws2812SmartLeds`], [`Sk68xxRgbwSmartLeds`], [`WhiteSmartLeds`], [`Rgb8RmtSmartLeds`].
 pub struct RmtSmartLeds<'d, const BUFFER_SIZE: usize, Mode, C, Order, Timing>
 where
     Mode: DriverMode,
@@ -307,9 +322,29 @@ where
     _color: PhantomData<C>,
 }
 
-/// A [`RmtSmartLeds`] specifically for 8-bit RGB colors, which is what most smart LEDs use.
+/// A [`RmtSmartLeds`] for 8-bit RGB colors, which is what most smart LEDs use.
+/// 
+/// You still need to pick the `Order` of the three colors as well as the `Timing` and the `BUFFER_SIZE`.
 pub type Rgb8RmtSmartLeds<'d, const BUFFER_SIZE: usize, Mode, Order, Timing> =
     RmtSmartLeds<'d, BUFFER_SIZE, Mode, RGB8, Order, Timing>;
+
+/// A [`RmtSmartLeds`] for the common WS2812 integrated smart LEDs.
+/// 
+/// You only need to pick the `BUFFER_SIZE` to use this.
+pub type Ws2812SmartLeds<'d, const BUFFER_SIZE: usize, Mode> =
+    Rgb8RmtSmartLeds<'d, BUFFER_SIZE, Mode, color_order::Grb, Ws2812Timing>;
+
+/// A [`RmtSmartLeds`] for integrated SK8612 (etc.) smart LEDs with RGBW.
+/// 
+/// You only need to pick the `BUFFER_SIZE` to use this.
+pub type Sk68xxRgbwSmartLeds<'d, const BUFFER_SIZE: usize, Mode> =
+    RmtSmartLeds<'d, BUFFER_SIZE, Mode, RGBW<u8>, color_order::Rgbw, Sk68xxTiming>;
+
+/// A [`RmtSmartLeds`] for smart LEDs with a single (white) channel.
+/// 
+/// You only need to pick the `BUFFER_SIZE` and `Timing` to use this.
+pub type WhiteSmartLeds<'d, const BUFFER_SIZE: usize, Mode, Timing> =
+    RmtSmartLeds<'d, BUFFER_SIZE, Mode, White<u8>, color_order::SingleChannel, Timing>;
 
 impl<'d, const BUFFER_SIZE: usize, Mode, C, Order, Timing>
     RmtSmartLeds<'d, BUFFER_SIZE, Mode, C, Order, Timing>

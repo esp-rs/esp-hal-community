@@ -28,7 +28,7 @@
 #![no_main]
 
 use esp_backtrace as _;
-use esp_hal::{Blocking, delay::Delay, rmt::Rmt, time::Rate};
+use esp_hal::{delay::Delay, rmt::Rmt, time::Rate};
 use esp_hal_smartled::{RmtSmartLeds, Ws2812Timing, buffer_size, color_order};
 use smart_leds::{
     RGB8, SmartLedsWrite, brightness, gamma,
@@ -70,7 +70,7 @@ fn main() -> ! {
     let mut led = {
         let rmt = Rmt::new(peripherals.RMT, freq).expect("Failed to initialize RMT0");
         // Configure color order and timing implementation as needed.
-        RmtSmartLeds::<{ buffer_size::<RGB8>(1) }, _, RGB8, color_order::Rgb, Ws2812Timing>::new_with_memsize(
+        RmtSmartLeds::<{ buffer_size::<LedColor>(1) }, _, LedColor, color_order::Rgb, Ws2812Timing>::new_with_memsize(
             rmt.channel0,
             led_pin,
             2,
