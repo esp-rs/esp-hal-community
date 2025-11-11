@@ -27,7 +27,11 @@
 //!
 //! ## Features
 //!
-//! None of the features provided by this crate are for external use, they are only used for testing and examples.
+//! - `defmt`: Derive [`defmt::Format`] on some types.
+//! - `embedded-graphics`: Enable [`RmtSmartLedsGraphics`], which implements an [`embedded_graphics`](`embedded_graphics_core`) display driver.
+//!   This allows you to use the smart LEDs in a 2D matrix with the `embedded-graphics` system.
+//!
+//! Other features provided by this crate are not for external use, they are only used for testing and examples.
 #![doc(html_logo_url = "https://avatars.githubusercontent.com/u/46717278")]
 #![deny(missing_docs)]
 #![no_std]
@@ -45,6 +49,11 @@ use num_traits::Unsigned;
 use smart_leds_trait::{
     CctWhite, RGB, RGB8, RGBCCT, RGBW, SmartLedsWrite, SmartLedsWriteAsync, White,
 };
+
+#[cfg(feature = "embedded-graphics")]
+pub mod graphics;
+#[cfg(feature = "embedded-graphics")]
+pub use graphics::RmtSmartLedsGraphics;
 
 /// Common trait for all different smart LED dependent timings.
 ///
@@ -131,7 +140,7 @@ impl From<RmtError> for AdapterError {
     }
 }
 
-/// Utility trait that retrieves metadata about all [`smart_leds`] color types.
+/// Utility trait that retrieves metadata about all [`smart_leds_trait`] color types.
 pub trait Color {
     /// The maximum channel number this color supports.
     ///
@@ -195,9 +204,7 @@ where
 ///
 /// You need to specify the correct color and channel type
 // TODO: As soon as generic expressions are more stabilized, we should be able to do this calculation entirely internally in `RmtSmartLeds`. For now, users have to be careful.
-pub const fn buffer_size<C: Color>(led_count: usize) -> usize
-where
-{
+pub const fn buffer_size<C: Color>(led_count: usize) -> usize {
     // The size we're assigning here is calculated as following
     //  (
     //   Nr. of LEDs
@@ -224,7 +231,7 @@ pub mod color_order {
         /// For instance, if color order is RGB, then the red value will be returned for channel 0,
         /// the green value for channel 1 and the blue value for channel 2.
         ///
-        /// The maximum channel number users are allowed to pass in is [`ChannelCount::CHANNELS`] (on `Color`) minus one.
+        /// The maximum channel number users are allowed to pass in is [`Color::CHANNELS`] minus one.
         /// If this restriction is not upheld, the implementation may panic.
         fn get_channel_data(color: &C, channel: u8) -> C::ChannelType;
     }
@@ -282,7 +289,6 @@ pub mod color_order {
 /// - The buffer size. This determines how many RMT pulses can be sent by this driver, and allows it to function entirely without heap allocation. It is strongly recommended to use the [`buffer_size`] function with the desired number of LEDs to choose a correct buffer size, otherwise [`SmartLedsWrite::write`] will return [`AdapterError::BufferSizeExceeded`].
 /// - The `Color`.
 ///   This determines the color model and number of channels to be sent.
-///   `Color` must implement [`ChannelCount`], which is already the case for all [`smart_leds`] colors.
 /// - The [`ColorOrder`].
 ///   This determines what order the LED expects the color values in.
 /// - The [`Timing`].

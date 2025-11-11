@@ -17,7 +17,8 @@ esp-hal = { version = "=1.0.0", default-features = false, features = [
 ] }
 smart-leds-trait = "0.3"
 defmt = { version = "1", optional = true }
-num-traits = { version = "0.2.19", default-features = false }
+num-traits = { version = "0.2", default-features = false }
+embedded-graphics-core = { version = "0.4", optional = true }
 
 [features]
 defmt = [
@@ -26,6 +27,8 @@ defmt = [
     "esp-bootloader-esp-idf/defmt",
     "esp-rtos/defmt",
 ]
+
+embedded-graphics = ["dep:embedded-graphics-core"]
 
 # unfortunately necessary ...
 # not to be used by upstream.
@@ -82,7 +85,8 @@ esp32s3 = [
 
 [package.metadata.docs.rs]
 # use a RISC-V chip and target for docs.rs as it doesn’t require a special compiler
-features = ["esp32c3", "esp-hal/unstable"]
+# also enable all optional features
+features = ["esp32c3", "esp-hal/unstable", "embedded-graphics", "defmt"]
 default-target = "riscv32imc-unknown-none-elf"
 targets = ["riscv32imc-unknown-none-elf"]
 
