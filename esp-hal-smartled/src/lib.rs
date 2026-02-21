@@ -16,8 +16,8 @@
 //!
 //! use esp_backtrace as _;
 //! use esp_hal::{rmt::Rmt, time::Rate, Config};
-//! use esp_hal_smartled::{smartLedBuffer, SmartLedsAdapter};
-//! use smart_leds::{brightness, colors::RED, SmartLedsWrite as _};
+//! use esp_hal_smartled::{smart_led_buffer, SmartLedsAdapter};
+//! use smart_leds::{brightness, colors::*, SmartLedsWrite as _};
 //!
 //! #[esp_hal::main]
 //! fn main() -> ! {
@@ -25,7 +25,7 @@
 //!     let mut led = {
 //!         let frequency = Rate::from_mhz(80);
 //!         let rmt = Rmt::new(p.RMT, frequency).expect("Failed to initialize RMT0");
-//!         SmartLedsAdapter::new(rmt.channel0, p.GPIO2, smartLedBuffer!(1))
+//!         SmartLedsAdapter::new(rmt.channel0, p.GPIO2, smart_led_buffer!(1))
 //!     };
 //!     let level = 10;
 //!     led.write(brightness([RED].into_iter(), level)).unwrap();
