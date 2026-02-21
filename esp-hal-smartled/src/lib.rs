@@ -25,10 +25,16 @@
 //!     let mut led = {
 //!         let frequency = Rate::from_mhz(80);
 //!         let rmt = Rmt::new(p.RMT, frequency).expect("Failed to initialize RMT0");
-//!         SmartLedsAdapter::new(rmt.channel0, p.GPIO2, smart_led_buffer!(1))
+//!         SmartLedsAdapter::new(rmt.channel0, p.GPIO2, smart_led_buffer!(3))
 //!     };
 //!     let level = 10;
 //!     led.write(brightness([RED].into_iter(), level)).unwrap();
+//!
+//!     // Multiple LEDs, also showing a separate list and way to set brightness
+//!     // First in the list is the first in the chain
+//!     let led_state = [ RED, GREEN/2, BLUE/4 ];
+//!     led.write(led_state).unwrap();
+//!
 //!     loop {} // loop forever
 //! }
 //! ```
