@@ -220,7 +220,7 @@ where
         O: PeripheralOutput<'ch>,
         C: TxChannelCreator<'ch, Blocking>,
     {
-        let channel = channel.configure_tx(pin, led_config()).unwrap();
+        let channel = channel.configure_tx(&led_config()).unwrap().with_pin(pin);
 
         // Assume the RMT peripheral is set up to use the APB clock
         let src_clock = Clocks::get().apb_clock.as_mhz();
@@ -265,11 +265,17 @@ where
 
         // Perform the actual RMT operation.
         let channel = self.channel.take().unwrap();
-        match channel.transmit(self.rmt_buffer)?.wait() {
-            Ok(chan) => {
-                self.channel = Some(chan);
-                Ok(())
-            }
+        match channel.transmit(self.rmt_buffer) {
+            Ok(chan) => match chan.wait() {
+                Ok(chan) => {
+                    self.channel = Some(chan);
+                    Ok(())
+                }
+                Err((e, chan)) => {
+                    self.channel = Some(chan);
+                    Err(LedAdapterError::TransmissionError(e))
+                }
+            },
             Err((e, chan)) => {
                 self.channel = Some(chan);
                 Err(LedAdapterError::TransmissionError(e))
@@ -338,7 +344,7 @@ where
         O: PeripheralOutput<'ch>,
         C: TxChannelCreator<'ch, Async>,
     {
-        let channel = channel.configure_tx(pin, led_config()).unwrap();
+        let channel = channel.configure_tx(&led_config()).unwrap().with_pin(pin);
 
         // Assume the RMT peripheral is set up to use the APB clock
         let src_clock = Clocks::get().apb_clock.as_mhz();

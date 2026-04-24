@@ -47,8 +47,9 @@ async fn main(_spawner: Spawner) -> ! {
     }
     #[cfg(target_arch = "xtensa")]
     {
+        let sw_int = esp_hal::interrupt::software::SoftwareInterruptControl::new(p.SW_INTERRUPT);
         let timg0 = TimerGroup::new(p.TIMG0);
-        esp_rtos::start(timg0.timer0);
+        esp_rtos::start(timg0.timer0, sw_int.software_interrupt0);
     }
 
     // Configure RMT (Remote Control Transceiver) peripheral globally

@@ -14,23 +14,23 @@ targets  = ["riscv32imac-unknown-none-elf"]
 [dependencies]
 defmt             = { version = "^1.0.1", optional = true }
 document-features = "^0.2.12"
-esp-hal           = { version = "~1.0", features = ["requires-unstable"] }
+esp-hal           = { version = "~1.1", features = ["requires-unstable"] }
 rgb = "0.8.52"
 smart-leds-trait  = "^0.3.2"
 
 [dev-dependencies]
 cfg-if = "1.0"
-esp-backtrace = { version = "0.18", features = [
+esp-backtrace = { version = "0.19", features = [
     "panic-handler",
     "println",
 ] }
-esp-hal = { version = "~1.0", features = ["unstable"] }
+esp-hal = { version = "~1.1", features = ["unstable"] }
 # Use esp-rtos for embassy support instead of esp-hal-embassy
-esp-rtos = { version = "^0.2", features = ["embassy"] }
-esp-bootloader-esp-idf = "0.4"
-embassy-executor = "0.9"
+esp-rtos = { version = "^0.3", features = ["embassy"] }
+esp-bootloader-esp-idf = "0.5"
+embassy-executor = "0.10"
 embassy-time = "0.5"
-esp-println = "0.16"
+esp-println = "0.17"
 smart-leds = "0.4"
 
 [features]
