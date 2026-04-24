@@ -42,7 +42,10 @@ use esp_hal::{
     Async, Blocking, DriverMode,
     clock::Clocks,
     gpio::{Level, interconnect::PeripheralOutput},
-    rmt::{Channel, Error as RmtError, PulseCode, Tx, TxChannelConfig, TxChannelCreator},
+    rmt::{
+        Channel, ConfigError as RmtConfigError, Error as RmtError, PulseCode, Tx, TxChannelConfig,
+        TxChannelCreator,
+    },
 };
 use num_traits::Unsigned;
 use smart_leds_trait::{
@@ -323,25 +326,25 @@ where
 }
 
 /// A [`RmtSmartLeds`] for 8-bit RGB colors, which is what most smart LEDs use.
-/// 
+///
 /// You still need to pick the `Order` of the three colors as well as the `Timing` and the `BUFFER_SIZE`.
 pub type Rgb8RmtSmartLeds<'d, const BUFFER_SIZE: usize, Mode, Order, Timing> =
     RmtSmartLeds<'d, BUFFER_SIZE, Mode, RGB8, Order, Timing>;
 
 /// A [`RmtSmartLeds`] for the common WS2812 integrated smart LEDs.
-/// 
+///
 /// You only need to pick the `BUFFER_SIZE` to use this.
 pub type Ws2812SmartLeds<'d, const BUFFER_SIZE: usize, Mode> =
     Rgb8RmtSmartLeds<'d, BUFFER_SIZE, Mode, color_order::Grb, Ws2812Timing>;
 
 /// A [`RmtSmartLeds`] for integrated SK8612 (etc.) smart LEDs with RGBW.
-/// 
+///
 /// You only need to pick the `BUFFER_SIZE` to use this.
 pub type Sk68xxRgbwSmartLeds<'d, const BUFFER_SIZE: usize, Mode> =
     RmtSmartLeds<'d, BUFFER_SIZE, Mode, RGBW<u8>, color_order::Rgbw, Sk68xxTiming>;
 
 /// A [`RmtSmartLeds`] for smart LEDs with a single (white) channel.
-/// 
+///
 /// You only need to pick the `BUFFER_SIZE` and `Timing` to use this.
 pub type WhiteSmartLeds<'d, const BUFFER_SIZE: usize, Mode, Timing> =
     RmtSmartLeds<'d, BUFFER_SIZE, Mode, White<u8>, color_order::SingleChannel, Timing>;
@@ -363,7 +366,7 @@ where
     /// # Errors
     ///
     /// If any configuration issue with the RMT [`Channel`] occurs, the error will be returned.
-    pub fn new<Ch, P>(channel: Ch, pin: P) -> Result<Self, RmtError>
+    pub fn new<Ch, P>(channel: Ch, pin: P) -> Result<Self, RmtConfigError>
     where
         Ch: TxChannelCreator<'d, Mode>,
         P: PeripheralOutput<'d>,
@@ -383,7 +386,7 @@ where
     /// # Errors
     ///
     /// If any configuration issue with the RMT [`Channel`] occurs, the error will be returned.
-    pub fn new_with_memsize<Ch, P>(channel: Ch, pin: P, memsize: u8) -> Result<Self, RmtError>
+    pub fn new_with_memsize<Ch, P>(channel: Ch, pin: P, memsize: u8) -> Result<Self, RmtConfigError>
     where
         Ch: TxChannelCreator<'d, Mode>,
         P: PeripheralOutput<'d>,
@@ -395,7 +398,7 @@ where
             .with_carrier_modulation(false)
             .with_idle_output(true);
 
-        let channel = channel.configure_tx(pin, config)?;
+        let channel = channel.configure_tx(&config)?.with_pin(pin);
 
         // Assume the RMT peripheral is set up to use the APB clock
         let clocks = Clocks::get();
@@ -482,7 +485,11 @@ where
         // This is currently unavoidable since transmit consumes the channel on error.
         // This is a known design flaw in the current RMT API and will be fixed soon.
         // We should adjust our usage accordingly as soon as possible.
-        match channel.transmit(&self.rmt_buffer)?.wait() {
+        match channel
+            .transmit(&self.rmt_buffer)
+            .map_err(|(e, _)| e)?
+            .wait()
+        {
             Ok(chan) => {
                 self.channel = Some(chan);
                 Ok(())
