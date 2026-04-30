@@ -101,7 +101,7 @@ jobs:
         with:
           components: rust-src
           targets: "riscv32imac-unknown-none-elf"
-      - run: RUSTDOCFLAGS="--cfg docsrs -Z unstable-options" cargo +nightly doc --target=riscv32imac-unknown-none-elf --features "esp32c6,esp-hal/unstable"
+      - run: RUSTDOCFLAGS="--cfg docsrs -Z unstable-options" cargo +nightly doc --target=riscv32imac-unknown-none-elf --features "esp32c6,esp-hal/unstable" --no-deps
 
   msrv-smartled:
     name: MSRV esp-hal-smartled
