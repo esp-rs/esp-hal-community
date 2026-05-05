@@ -206,6 +206,9 @@ impl<'ch, const BUFFER_SIZE: usize> SmartLedsAdapter<'ch, BUFFER_SIZE, Grb<u8>> 
     }
 }
 
+// smart-leds-trait still uses rgb 0.8's ComponentSlice color API.
+// Remove these allowances once https://github.com/esp-rs/esp-hal-community/pull/64 is resolved.
+#[allow(deprecated)]
 impl<'ch, const BUFFER_SIZE: usize, Color> SmartLedsAdapter<'ch, BUFFER_SIZE, Color>
 where
     Color: rgb::ComponentSlice<u8>,
@@ -234,6 +237,7 @@ where
     }
 }
 
+#[allow(deprecated)]
 impl<'ch, const BUFFER_SIZE: usize, Color> SmartLedsWrite
     for SmartLedsAdapter<'ch, BUFFER_SIZE, Color>
 where
@@ -330,6 +334,7 @@ impl<'ch, const BUFFER_SIZE: usize> SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Grb<
     }
 }
 
+#[allow(deprecated)]
 impl<'ch, const BUFFER_SIZE: usize, Color> SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Color>
 where
     Color: rgb::ComponentSlice<u8>,
@@ -387,6 +392,7 @@ where
     }
 }
 
+#[allow(deprecated)]
 impl<'ch, const BUFFER_SIZE: usize, Color> SmartLedsWriteAsync
     for SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Color>
 where

@@ -1,7 +1,7 @@
 all: check-risc-v build-risc-v check-xtensa build-xtensa clippy
 
 clippy:
-  cargo clippy --features "esp32c6" --target=riscv32imac-unknown-none-elf --release
+  cargo +stable clippy --features "esp32c6,esp-hal/unstable" --target=riscv32imac-unknown-none-elf -- -D warnings
 
 check-risc-v: build-esp32c3 build-esp32c6 build-esp32h2
 
