@@ -25,11 +25,11 @@ build-esp32h2:
 check-xtensa:  check-esp32s2 check-esp32s3 check-esp32
 
 check-esp32:
-  cargo +esp check --features "esp32" --target=xtensa-esp32-none-elf --release
+  cargo +esp check --features "esp32,esp-hal/unstable" --target=xtensa-esp32-none-elf --release
 check-esp32s2:
-  cargo +esp check --features "esp32s2" --target=xtensa-esp32s2-none-elf --release
+  cargo +esp check --features "esp32s2,esp-hal/unstable" --target=xtensa-esp32s2-none-elf --release
 check-esp32s3:
-  cargo +esp check --features "esp32s3" --target=xtensa-esp32s3-none-elf --release
+  cargo +esp check --features "esp32s3,esp-hal/unstable" --target=xtensa-esp32s3-none-elf --release
 
 build-xtensa:  build-esp32s2 build-esp32s3 build-esp32
 

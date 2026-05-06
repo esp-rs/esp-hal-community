@@ -225,8 +225,10 @@ where
     {
         let channel = channel.configure_tx(&led_config()).unwrap().with_pin(pin);
 
-        // Assume the RMT peripheral is set up to use the APB clock
-        let src_clock = Clocks::get().apb_clock.as_mhz();
+        #[cfg(feature = "esp32h2")]
+        let src_clock = 32u32;
+        #[cfg(not(feature = "esp32h2"))]
+        let src_clock = 80u32;
 
         Self {
             channel: Some(channel),
