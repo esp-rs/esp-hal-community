@@ -49,7 +49,6 @@ use core::{fmt::Debug, marker::PhantomData, slice::IterMut};
 
 use esp_hal::{
     Async, Blocking,
-    clock::Clocks,
     gpio::{Level, interconnect::PeripheralOutput},
     rmt::{Channel, Error as RmtError, PulseCode, Tx, TxChannelConfig, TxChannelCreator},
 };
@@ -66,6 +65,12 @@ const SK68XX_T0H_NS: u32 = 400; // 300ns per SK6812 datasheet, 400 per WS2812. S
 const SK68XX_T0L_NS: u32 = SK68XX_CODE_PERIOD - SK68XX_T0H_NS;
 const SK68XX_T1H_NS: u32 = 850; // 900ns per SK6812 datasheet, 850 per WS2812. > 550ns is sometimes enough. Some require T1H >= 2 * T0H. Some require > 300ns T1L.
 const SK68XX_T1L_NS: u32 = SK68XX_CODE_PERIOD - SK68XX_T1H_NS;
+
+// Hardcoded (for now) values of the RMT clock
+#[cfg(feature = "esp32h2")]
+const RMT_CLOCK_MHZ: u32 = 32u32;
+#[cfg(not(feature = "esp32h2"))]
+const RMT_CLOCK_MHZ: u32 = 80u32;
 
 /// All types of errors that can happen during the conversion and transmission
 /// of LED commands
@@ -225,15 +230,10 @@ where
     {
         let channel = channel.configure_tx(&led_config()).unwrap().with_pin(pin);
 
-        #[cfg(feature = "esp32h2")]
-        let src_clock = 32u32;
-        #[cfg(not(feature = "esp32h2"))]
-        let src_clock = 80u32;
-
         Self {
             channel: Some(channel),
             rmt_buffer,
-            pulses: led_pulses_for_clock(src_clock),
+            pulses: led_pulses_for_clock(RMT_CLOCK_MHZ),
             color: PhantomData,
         }
     }
@@ -353,13 +353,10 @@ where
     {
         let channel = channel.configure_tx(&led_config()).unwrap().with_pin(pin);
 
-        // Assume the RMT peripheral is set up to use the APB clock
-        let src_clock = Clocks::get().apb_clock.as_mhz();
-
         Self {
             channel,
             rmt_buffer,
-            pulses: led_pulses_for_clock(src_clock),
+            pulses: led_pulses_for_clock(RMT_CLOCK_MHZ),
             color: PhantomData,
         }
     }
