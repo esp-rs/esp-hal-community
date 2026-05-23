@@ -2,7 +2,7 @@
 name = "esp-hal-smartled2"
 version = "0.28.1"
 edition = "2024"
-rust-version = "1.90"
+rust-version = "1.95"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/kleinesfilmroellchen/esp-hal-smartled"
 documentation = "https://docs.rs/esp-hal-smartled2"
@@ -90,13 +90,12 @@ targets = ["riscv32imc-unknown-none-elf"]
 
 [dev-dependencies]
 esp-hal = { version = "1.1.1", features = ["unstable"] }
-esp-rtos = { version = "0.2", features = ["embassy"] }
-esp-backtrace = { version = "0.18", features = ["panic-handler", "println"] }
-esp-println = { version = "0.16", features = ["defmt-espflash", "auto"] }
+esp-rtos = { version = "0.3", features = ["embassy"] }
+esp-backtrace = { version = "0.19", features = ["panic-handler", "println"] }
+esp-println = { version = "0.17", features = ["defmt-espflash", "auto"] }
 embedded-graphics = { version = "0.8" }
-esp-bootloader-esp-idf = { version = "0.4.0" }
+esp-bootloader-esp-idf = { version = "0.5.0" }
 smart-leds = "0.4"
-cfg-if = "1"
-embassy-executor = "0.9"
+embassy-executor = "0.10"
 embassy-time = "0.5"
 embassy-futures = "0.1.2"
