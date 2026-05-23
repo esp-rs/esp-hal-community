@@ -349,6 +349,27 @@ pub type Sk68xxRgbwSmartLeds<'d, const BUFFER_SIZE: usize, Mode> =
 pub type WhiteSmartLeds<'d, const BUFFER_SIZE: usize, Mode, Timing> =
     RmtSmartLeds<'d, BUFFER_SIZE, Mode, White<u8>, color_order::SingleChannel, Timing>;
 
+/// Returns the pulse code for a zero bit, given the RMT source clock’s speed in MHz.
+const fn zero_pulse<T: Timing>(src_clock_mhz: u32) -> PulseCode {
+    PulseCode::new(
+        Level::High,
+        // FIXME: For some reason, we transmit half as many pulses as necessary. This broke somewhere between esp-hal 1.0 and 1.1.
+        //        It’s definitely not the clock reporting’s fault, but that’s all we know.
+        ((T::TIME_0_HIGH as u32 * src_clock_mhz * 2) / 1000) as u16,
+        Level::Low,
+        ((T::TIME_0_LOW as u32 * src_clock_mhz * 2) / 1000) as u16,
+    )
+}
+/// Returns the pulse code for a one bit, given the RMT source clock’s speed in MHz.
+const fn one_pulse<T: Timing>(src_clock_mhz: u32) -> PulseCode {
+    PulseCode::new(
+        Level::High,
+        ((T::TIME_1_HIGH as u32 * src_clock_mhz * 2) / 1000) as u16,
+        Level::Low,
+        ((T::TIME_1_LOW as u32 * src_clock_mhz * 2) / 1000) as u16,
+    )
+}
+
 impl<'d, const BUFFER_SIZE: usize, Mode, C, Order, Timing>
     RmtSmartLeds<'d, BUFFER_SIZE, Mode, C, Order, Timing>
 where
@@ -405,25 +426,19 @@ where
         // convert to the MHz value to simplify nanosecond calculations
         let src_clock = clocks.apb_clock.as_hz() / 1_000_000;
 
-        let zero_pulse = PulseCode::new(
-            Level::High,
-            ((Timing::TIME_0_HIGH as u32 * src_clock) / 1000) as u16,
-            Level::Low,
-            ((Timing::TIME_0_LOW as u32 * src_clock) / 1000) as u16,
+        defmt::debug!(
+            "zero pulse [{}, {}]",
+            zero_pulse::<Timing>(src_clock).length1(),
+            zero_pulse::<Timing>(src_clock).length2()
         );
-        let mut rmt_buffer = [zero_pulse; _];
+        let mut rmt_buffer = [zero_pulse::<Timing>(src_clock); _];
         rmt_buffer[BUFFER_SIZE - 1] = PulseCode::end_marker();
         Ok(Self {
             channel: Some(channel),
             rmt_buffer,
             pulses: (
-                zero_pulse,
-                PulseCode::new(
-                    Level::High,
-                    ((Timing::TIME_1_HIGH as u32 * src_clock) / 1000) as u16,
-                    Level::Low,
-                    ((Timing::TIME_1_LOW as u32 * src_clock) / 1000) as u16,
-                ),
+                zero_pulse::<Timing>(src_clock),
+                one_pulse::<Timing>(src_clock),
             ),
             _order: PhantomData,
             _timing: PhantomData,
