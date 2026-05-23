@@ -35,10 +35,13 @@ Also have a look at the [examples](https://github.com/kleinesfilmroellchen/esp-h
 
 This crate is guaranteed to compile on whatever Rust version esp-hal requires, which is the latest stable version at the time of release. It _might_ compile with older versions but that may change in any new patch release.
 
-This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compatible with _exactly_ esp-hal 1.0.0, as the peripheral API might change in any future release and is likely to go through significant changes before stabilization. In order to use this crate, you have to enable the `unstable` feature on esp-hal.
+This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compatible with _exactly_ esp-hal 1.1.1, as the peripheral API might change in any future release and is likely to go through significant changes before stabilization. In order to use this crate, you have to enable the `unstable` feature on esp-hal.
 
 ### Migration
 
+- `0.28.2`
+  - Updated to esp-hal 1.1.
+  - Work around the fact that the APB clock speed does not seem to match the RMT base clock speed anymore. This is hopefully a temporary fix until we can properly read and configure the RMT base clock.
 - `0.28`
   - Renamed the driver from `SmartLedsAdapter` to the more descriptive `RmtSmartLeds` to emphasize the use of the RMT peripheral.
   - New `SmartLedsAdapter::flush` function that sends the previously created RMT data again (only in blocking mode).
