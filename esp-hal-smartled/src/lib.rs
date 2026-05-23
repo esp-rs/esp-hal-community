@@ -426,11 +426,6 @@ where
         // convert to the MHz value to simplify nanosecond calculations
         let src_clock = clocks.apb_clock.as_hz() / 1_000_000;
 
-        defmt::debug!(
-            "zero pulse [{}, {}]",
-            zero_pulse::<Timing>(src_clock).length1(),
-            zero_pulse::<Timing>(src_clock).length2()
-        );
         let mut rmt_buffer = [zero_pulse::<Timing>(src_clock); _];
         rmt_buffer[BUFFER_SIZE - 1] = PulseCode::end_marker();
         Ok(Self {
