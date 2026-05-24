@@ -283,6 +283,23 @@ pub mod color_order {
         }
     }
 
+    /// [`ColorOrder`] GRBW.
+    pub enum Grbw {}
+    impl<T> ColorOrder<RGBW<T>> for Grbw
+    where
+        T: Copy + num_traits::sign::Unsigned + Into<usize>,
+    {
+        fn get_channel_data(color: &RGBW<T>, channel: u8) -> T {
+            match channel {
+                0 => color.g,
+                1 => color.r,
+                2 => color.b,
+                3 => color.a.0,
+                _ => unreachable!(),
+            }
+        }
+    }
+
     /// [`ColorOrder`] for single-channel smart LEDs, where the order is trivial.
     pub enum SingleChannel {}
     impl<T> ColorOrder<White<T>> for SingleChannel
