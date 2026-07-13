@@ -48,73 +48,68 @@ use esp_hal::{
     },
 };
 use num_traits::Unsigned;
-use smart_leds_trait::{
-    CctWhite, RGB, RGB8, RGBCCT, RGBW, SmartLedsWrite, SmartLedsWriteAsync, White,
-};
+use smart_leds_trait::{CctWhite, RGB, RGBCCT, RGBW, SmartLedsWrite, SmartLedsWriteAsync, White};
 
-/// Common trait for all different smart LED dependent timings.
+/// Timings struct.
 ///
 /// All common smart LEDs are controlled by sending PWM-like pulses, in two different configurations for high and low.
 /// The required timings (and tolerances) can be found in the relevant datasheets.
 ///
 /// Provided timings: [`Sk68xxTiming`], [`Ws2812bTiming`], [`Ws2811Timing`], [`Ws2812Timing`]
-// Implementations of this should be vacant enums so they can’t be constructed.
-pub trait Timing {
+#[derive(Clone, Copy)]
+pub struct Timing {
     /// Low time for zero pulse, in nanoseconds.
-    const TIME_0_LOW: u16;
+    time_0_low: u16,
     /// High time for zero pulse, in nanoseconds.
-    const TIME_0_HIGH: u16;
+    time_0_high: u16,
     /// Low time for one pulse, in nanoseconds.
-    const TIME_1_LOW: u16;
+    time_1_low: u16,
     /// High time for one pulse, in nanoseconds.
-    const TIME_1_HIGH: u16;
+    time_1_high: u16,
 }
 
 const SK68XX_CODE_PERIOD: u16 = 1200;
+const SK68XX_TIME_0_HIGH: u16 = 320;
+const SK68XX_TIME_1_HIGH: u16 = 640;
 /// Timing for the SK68 collection of LEDs.
-pub enum Sk68xxTiming {}
-impl Timing for Sk68xxTiming {
-    const TIME_0_HIGH: u16 = 320;
-    const TIME_0_LOW: u16 = SK68XX_CODE_PERIOD - Self::TIME_0_HIGH;
-    const TIME_1_HIGH: u16 = 640;
-    const TIME_1_LOW: u16 = SK68XX_CODE_PERIOD - Self::TIME_1_HIGH;
-}
+pub const SK68XX_TIMING: Timing = Timing {
+    time_0_high: SK68XX_TIME_0_HIGH,
+    time_0_low: SK68XX_CODE_PERIOD - SK68XX_TIME_0_HIGH,
+    time_1_high: SK68XX_TIME_1_HIGH,
+    time_1_low: SK68XX_CODE_PERIOD - SK68XX_TIME_1_HIGH,
+};
 
 /// Timing for the WS2812B LEDs.
-pub enum Ws2812bTiming {}
-impl Timing for Ws2812bTiming {
-    const TIME_0_HIGH: u16 = 400;
-    const TIME_0_LOW: u16 = 800;
-    const TIME_1_HIGH: u16 = 850;
-    const TIME_1_LOW: u16 = 450;
-}
+pub const WS2812B_TIMING: Timing = Timing {
+    time_0_high: 400,
+    time_0_low: 800,
+    time_1_high: 850,
+    time_1_low: 450,
+};
 
 /// Timing for the WS2812 LEDs.
-pub enum Ws2812Timing {}
-impl Timing for Ws2812Timing {
-    const TIME_0_HIGH: u16 = 350;
-    const TIME_0_LOW: u16 = 700;
-    const TIME_1_HIGH: u16 = 800;
-    const TIME_1_LOW: u16 = 600;
-}
+pub const WS2812_TIMING: Timing = Timing {
+    time_0_high: 350,
+    time_0_low: 700,
+    time_1_high: 800,
+    time_1_low: 600,
+};
 
 /// Timing for the WS2811 driver ICs, low-speed mode.
-pub enum Ws2811LowSpeedTiming {}
-impl Timing for Ws2811LowSpeedTiming {
-    const TIME_0_HIGH: u16 = 500;
-    const TIME_0_LOW: u16 = 2000;
-    const TIME_1_HIGH: u16 = 1200;
-    const TIME_1_LOW: u16 = 1300;
-}
+pub const WS2811_LOW_SPEED_TIMING: Timing = Timing {
+    time_0_high: 500,
+    time_0_low: 2000,
+    time_1_high: 1200,
+    time_1_low: 1300,
+};
 
 /// Timing for the WS2811 driver ICs, high-speed mode.
-pub enum Ws2811Timing {}
-impl Timing for Ws2811Timing {
-    const TIME_0_HIGH: u16 = Ws2811LowSpeedTiming::TIME_0_HIGH / 2;
-    const TIME_0_LOW: u16 = Ws2811LowSpeedTiming::TIME_0_LOW / 2;
-    const TIME_1_HIGH: u16 = Ws2811LowSpeedTiming::TIME_1_HIGH / 2;
-    const TIME_1_LOW: u16 = Ws2811LowSpeedTiming::TIME_1_LOW / 2;
-}
+pub const WS2811_TIMING: Timing = Timing {
+    time_0_high: WS2811_LOW_SPEED_TIMING.time_0_high / 2,
+    time_0_low: WS2811_LOW_SPEED_TIMING.time_0_low / 2,
+    time_1_high: WS2811_LOW_SPEED_TIMING.time_1_high / 2,
+    time_1_low: WS2811_LOW_SPEED_TIMING.time_1_low / 2,
+};
 
 /// All types of errors that can happen during the conversion and transmission
 /// of LED commands.
@@ -310,73 +305,45 @@ pub mod color_order {
 /// (You usually don’t need to choose this manually, Rust can deduce it from the passed-in RMT channel.)
 ///
 /// Some common configurations have predefined aliases: [`Ws2812SmartLeds`], [`Sk68xxRgbwSmartLeds`], [`WhiteSmartLeds`], [`Rgb8RmtSmartLeds`].
-pub struct RmtSmartLeds<'d, const BUFFER_SIZE: usize, Mode, C, Order, Timing>
+pub struct RmtSmartLeds<'d, const BUFFER_SIZE: usize, Mode, C, Order>
 where
     Mode: DriverMode,
     C: Color,
     Order: ColorOrder<C>,
-    Timing: crate::Timing,
 {
     channel: Option<Channel<'d, Mode, Tx>>,
     rmt_buffer: [PulseCode; BUFFER_SIZE],
     pulses: (PulseCode, PulseCode),
     _order: PhantomData<Order>,
-    _timing: PhantomData<Timing>,
     _color: PhantomData<C>,
 }
 
-/// A [`RmtSmartLeds`] for 8-bit RGB colors, which is what most smart LEDs use.
-///
-/// You still need to pick the `Order` of the three colors as well as the `Timing` and the `BUFFER_SIZE`.
-pub type Rgb8RmtSmartLeds<'d, const BUFFER_SIZE: usize, Mode, Order, Timing> =
-    RmtSmartLeds<'d, BUFFER_SIZE, Mode, RGB8, Order, Timing>;
-
-/// A [`RmtSmartLeds`] for the common WS2812 integrated smart LEDs.
-///
-/// You only need to pick the `BUFFER_SIZE` to use this.
-pub type Ws2812SmartLeds<'d, const BUFFER_SIZE: usize, Mode> =
-    Rgb8RmtSmartLeds<'d, BUFFER_SIZE, Mode, color_order::Grb, Ws2812Timing>;
-
-/// A [`RmtSmartLeds`] for integrated SK8612 (etc.) smart LEDs with RGBW.
-///
-/// You only need to pick the `BUFFER_SIZE` to use this.
-pub type Sk68xxRgbwSmartLeds<'d, const BUFFER_SIZE: usize, Mode> =
-    RmtSmartLeds<'d, BUFFER_SIZE, Mode, RGBW<u8>, color_order::Rgbw, Sk68xxTiming>;
-
-/// A [`RmtSmartLeds`] for smart LEDs with a single (white) channel.
-///
-/// You only need to pick the `BUFFER_SIZE` and `Timing` to use this.
-pub type WhiteSmartLeds<'d, const BUFFER_SIZE: usize, Mode, Timing> =
-    RmtSmartLeds<'d, BUFFER_SIZE, Mode, White<u8>, color_order::SingleChannel, Timing>;
-
 /// Returns the pulse code for a zero bit, given the RMT source clock’s speed in MHz.
-const fn zero_pulse<T: Timing>(src_clock_mhz: u32) -> PulseCode {
+const fn zero_pulse(t: &Timing, src_clock_mhz: u32) -> PulseCode {
     PulseCode::new(
         Level::High,
         // FIXME: For some reason, we transmit half as many pulses as necessary. This broke somewhere between esp-hal 1.0 and 1.1.
         //        It’s definitely not the clock reporting’s fault, but that’s all we know.
-        ((T::TIME_0_HIGH as u32 * src_clock_mhz * 2) / 1000) as u16,
+        ((t.time_0_high as u32 * src_clock_mhz * 2) / 1000) as u16,
         Level::Low,
-        ((T::TIME_0_LOW as u32 * src_clock_mhz * 2) / 1000) as u16,
+        ((t.time_0_low as u32 * src_clock_mhz * 2) / 1000) as u16,
     )
 }
 /// Returns the pulse code for a one bit, given the RMT source clock’s speed in MHz.
-const fn one_pulse<T: Timing>(src_clock_mhz: u32) -> PulseCode {
+const fn one_pulse(t: &Timing, src_clock_mhz: u32) -> PulseCode {
     PulseCode::new(
         Level::High,
-        ((T::TIME_1_HIGH as u32 * src_clock_mhz * 2) / 1000) as u16,
+        ((t.time_1_high as u32 * src_clock_mhz * 2) / 1000) as u16,
         Level::Low,
-        ((T::TIME_1_LOW as u32 * src_clock_mhz * 2) / 1000) as u16,
+        ((t.time_1_low as u32 * src_clock_mhz * 2) / 1000) as u16,
     )
 }
 
-impl<'d, const BUFFER_SIZE: usize, Mode, C, Order, Timing>
-    RmtSmartLeds<'d, BUFFER_SIZE, Mode, C, Order, Timing>
+impl<'d, const BUFFER_SIZE: usize, Mode, C, Order> RmtSmartLeds<'d, BUFFER_SIZE, Mode, C, Order>
 where
     Mode: DriverMode,
     C: Color,
     Order: ColorOrder<C>,
-    Timing: crate::Timing,
 {
     /// Creates a new [`RmtSmartLeds`] that drives the provided output using the given RMT channel.
     ///
@@ -387,12 +354,12 @@ where
     /// # Errors
     ///
     /// If any configuration issue with the RMT [`Channel`] occurs, the error will be returned.
-    pub fn new<Ch, P>(channel: Ch, pin: P) -> Result<Self, RmtConfigError>
+    pub fn new<Ch, P>(timing: Timing, channel: Ch, pin: P) -> Result<Self, RmtConfigError>
     where
         Ch: TxChannelCreator<'d, Mode>,
         P: PeripheralOutput<'d>,
     {
-        Self::new_with_memsize(channel, pin, 1)
+        Self::new_with_memsize(timing, channel, pin, 1)
     }
     /// Creates a new [`RmtSmartLeds`] that drives the provided output using the given RMT channel.
     ///
@@ -407,7 +374,12 @@ where
     /// # Errors
     ///
     /// If any configuration issue with the RMT [`Channel`] occurs, the error will be returned.
-    pub fn new_with_memsize<Ch, P>(channel: Ch, pin: P, memsize: u8) -> Result<Self, RmtConfigError>
+    pub fn new_with_memsize<Ch, P>(
+        timing: Timing,
+        channel: Ch,
+        pin: P,
+        memsize: u8,
+    ) -> Result<Self, RmtConfigError>
     where
         Ch: TxChannelCreator<'d, Mode>,
         P: PeripheralOutput<'d>,
@@ -426,19 +398,29 @@ where
         // convert to the MHz value to simplify nanosecond calculations
         let src_clock = clocks.apb_clock.as_hz() / 1_000_000;
 
-        let mut rmt_buffer = [zero_pulse::<Timing>(src_clock); _];
+        let mut rmt_buffer = [zero_pulse(&timing, src_clock); _];
         rmt_buffer[BUFFER_SIZE - 1] = PulseCode::end_marker();
         Ok(Self {
             channel: Some(channel),
             rmt_buffer,
             pulses: (
-                zero_pulse::<Timing>(src_clock),
-                one_pulse::<Timing>(src_clock),
+                zero_pulse(&timing, src_clock),
+                one_pulse(&timing, src_clock),
             ),
             _order: PhantomData,
-            _timing: PhantomData,
             _color: PhantomData,
         })
+    }
+
+    /// Sets the timing
+    pub fn set_timing(&mut self, t: Timing) {
+        // Assume the RMT peripheral is set up to use the APB clock
+        let clocks = Clocks::get();
+        // convert to the MHz value to simplify nanosecond calculations
+        let src_clock = clocks.apb_clock.as_hz() / 1_000_000;
+
+        self.rmt_buffer.fill(zero_pulse(&t, src_clock));
+        *self.rmt_buffer.last_mut().unwrap() = PulseCode::end_marker();
     }
 
     /// Create and store RMT data from the color information provided.
@@ -480,12 +462,10 @@ where
     }
 }
 
-impl<'d, const BUFFER_SIZE: usize, C, Order, Timing>
-    RmtSmartLeds<'d, BUFFER_SIZE, Blocking, C, Order, Timing>
+impl<'d, const BUFFER_SIZE: usize, C, Order> RmtSmartLeds<'d, BUFFER_SIZE, Blocking, C, Order>
 where
     C: Color,
     Order: ColorOrder<C>,
-    Timing: crate::Timing,
 {
     /// Transmit existing LED data via the RMT peripheral.
     pub fn flush(&mut self) -> Result<(), AdapterError> {
@@ -512,12 +492,11 @@ where
     }
 }
 
-impl<'d, const BUFFER_SIZE: usize, C, Order, Timing> SmartLedsWrite
-    for RmtSmartLeds<'d, BUFFER_SIZE, Blocking, C, Order, Timing>
+impl<'d, const BUFFER_SIZE: usize, C, Order> SmartLedsWrite
+    for RmtSmartLeds<'d, BUFFER_SIZE, Blocking, C, Order>
 where
     C: Color,
     Order: ColorOrder<C>,
-    Timing: crate::Timing,
 {
     type Error = AdapterError;
     type Color = C;
@@ -535,12 +514,11 @@ where
     }
 }
 
-impl<'d, const BUFFER_SIZE: usize, C, Order, Timing> SmartLedsWriteAsync
-    for RmtSmartLeds<'d, BUFFER_SIZE, Async, C, Order, Timing>
+impl<'d, const BUFFER_SIZE: usize, C, Order> SmartLedsWriteAsync
+    for RmtSmartLeds<'d, BUFFER_SIZE, Async, C, Order>
 where
     C: Color,
     Order: ColorOrder<C>,
-    Timing: crate::Timing,
 {
     type Error = AdapterError;
     type Color = C;
@@ -580,7 +558,7 @@ where
     Order: ColorOrder<C>,
 {
     for channel in 0..C::CHANNELS {
-        convert_channel_to_pulses(Order::get_channel_data(&value, channel), mut_iter, pulses)?;
+        convert_channel_to_pulses(Order::get_channel_data(value, channel), mut_iter, pulses)?;
     }
 
     Ok(())
