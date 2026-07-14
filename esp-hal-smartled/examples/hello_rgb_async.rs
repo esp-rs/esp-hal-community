@@ -21,7 +21,7 @@ use esp_backtrace as _;
 use esp_hal::interrupt::software::SoftwareInterruptControl;
 use esp_hal::timer::timg::TimerGroup;
 use esp_hal::{rmt::Rmt, time::Rate};
-use esp_hal_smartled::{RmtSmartLeds, Ws2811LowSpeedTiming, Ws2811Timing, Ws2812Timing, Ws2812bTiming, buffer_size, color_order};
+use esp_hal_smartled::{RmtSmartLeds, buffer_size, color_order};
 use smart_leds::RGB8;
 use smart_leds::{
     SmartLedsWriteAsync, brightness, gamma,
@@ -74,7 +74,8 @@ async fn main(spawner: Spawner) -> ! {
             .expect("Failed to initialize RMT0")
             .into_async();
         // Configure color order and timing implementation as needed.
-        RmtSmartLeds::<{ buffer_size::<RGB8>(LEDS) }, _, RGB8, color_order::Rgb, Ws2811LowSpeedTiming>::new(
+        RmtSmartLeds::<{ buffer_size::<RGB8>(LEDS) }, _, RGB8, color_order::Grb>::new(
+            esp_hal_smartled::WS2812_TIMING,
             rmt.channel0,
             led_pin,
         )

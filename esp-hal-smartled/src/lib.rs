@@ -59,13 +59,16 @@ use smart_leds_trait::{CctWhite, RGB, RGBCCT, RGBW, SmartLedsWrite, SmartLedsWri
 #[derive(Clone, Copy)]
 pub struct Timing {
     /// Low time for zero pulse, in nanoseconds.
-    time_0_low: u16,
+    pub time_0_low: u16,
     /// High time for zero pulse, in nanoseconds.
-    time_0_high: u16,
+    pub time_0_high: u16,
     /// Low time for one pulse, in nanoseconds.
-    time_1_low: u16,
+    pub time_1_low: u16,
     /// High time for one pulse, in nanoseconds.
-    time_1_high: u16,
+    pub time_1_high: u16,
+    /// Time for the reset after end of transmission, in nanoseconds, in ws2812
+    /// it's 50us.
+    pub reset: u16,
 }
 
 const SK68XX_CODE_PERIOD: u16 = 1200;
@@ -77,6 +80,7 @@ pub const SK68XX_TIMING: Timing = Timing {
     time_0_low: SK68XX_CODE_PERIOD - SK68XX_TIME_0_HIGH,
     time_1_high: SK68XX_TIME_1_HIGH,
     time_1_low: SK68XX_CODE_PERIOD - SK68XX_TIME_1_HIGH,
+    reset: 50_000,
 };
 
 /// Timing for the WS2812B LEDs.
@@ -85,6 +89,7 @@ pub const WS2812B_TIMING: Timing = Timing {
     time_0_low: 800,
     time_1_high: 850,
     time_1_low: 450,
+    reset: 50_000,
 };
 
 /// Timing for the WS2812 LEDs.
@@ -93,6 +98,7 @@ pub const WS2812_TIMING: Timing = Timing {
     time_0_low: 700,
     time_1_high: 800,
     time_1_low: 600,
+    reset: 50_000,
 };
 
 /// Timing for the WS2811 driver ICs, low-speed mode.
@@ -101,6 +107,7 @@ pub const WS2811_LOW_SPEED_TIMING: Timing = Timing {
     time_0_low: 2000,
     time_1_high: 1200,
     time_1_low: 1300,
+    reset: 50_000,
 };
 
 /// Timing for the WS2811 driver ICs, high-speed mode.
@@ -109,6 +116,7 @@ pub const WS2811_TIMING: Timing = Timing {
     time_0_low: WS2811_LOW_SPEED_TIMING.time_0_low / 2,
     time_1_high: WS2811_LOW_SPEED_TIMING.time_1_high / 2,
     time_1_low: WS2811_LOW_SPEED_TIMING.time_1_low / 2,
+    reset: 50_000,
 };
 
 /// All types of errors that can happen during the conversion and transmission
@@ -124,6 +132,8 @@ pub enum AdapterError {
     BufferSizeExceeded,
     /// Raised if something goes wrong in the transmission. This contains the inner HAL error ([`RmtError`]).
     TransmissionError(RmtError),
+    /// Can be returned by flush after a failed write for example
+    BufferNotReady,
 }
 
 impl From<RmtError> for AdapterError {
@@ -202,8 +212,8 @@ pub const fn buffer_size<C: Color>(led_count: usize) -> usize {
     //   Nr. of LEDs
     //   * channels
     //   * pulses per channel (=bitcount)
-    //  ) + 1 additional pulse for the end delimiter
-    led_count * (size_of::<C::ChannelType>() * 8) * C::CHANNELS as usize + 1
+    //  ) + 1 additional pulse for the end delimiter + 1 reset
+    led_count * (size_of::<C::ChannelType>() * 8) * C::CHANNELS as usize + 2
 }
 
 /// Common [`ColorOrder`] implementations.
@@ -313,7 +323,9 @@ where
 {
     channel: Option<Channel<'d, Mode, Tx>>,
     rmt_buffer: [PulseCode; BUFFER_SIZE],
+    buffer_valid: bool,
     pulses: (PulseCode, PulseCode),
+    reset_pulse: PulseCode,
     _order: PhantomData<Order>,
     _color: PhantomData<C>,
 }
@@ -336,6 +348,16 @@ const fn one_pulse(t: &Timing, src_clock_mhz: u32) -> PulseCode {
         ((t.time_1_high as u32 * src_clock_mhz * 2) / 1000) as u16,
         Level::Low,
         ((t.time_1_low as u32 * src_clock_mhz * 2) / 1000) as u16,
+    )
+}
+
+const fn reset_pulse(t: &Timing, src_clock_mhz: u32) -> PulseCode {
+    let reset_half = (t.reset / 2) as u32;
+    PulseCode::new(
+        Level::Low,
+        ((reset_half * src_clock_mhz / 2) / 1000) as u16,
+        Level::Low,
+        ((reset_half * src_clock_mhz / 2) / 1000) as u16,
     )
 }
 
@@ -398,15 +420,20 @@ where
         // convert to the MHz value to simplify nanosecond calculations
         let src_clock = clocks.apb_clock.as_hz() / 1_000_000;
 
+        let reset_pulse = reset_pulse(&timing, src_clock);
+
         let mut rmt_buffer = [zero_pulse(&timing, src_clock); _];
+        rmt_buffer[BUFFER_SIZE - 2] = reset_pulse;
         rmt_buffer[BUFFER_SIZE - 1] = PulseCode::end_marker();
         Ok(Self {
             channel: Some(channel),
             rmt_buffer,
+            buffer_valid: true,
             pulses: (
                 zero_pulse(&timing, src_clock),
                 one_pulse(&timing, src_clock),
             ),
+            reset_pulse,
             _order: PhantomData,
             _color: PhantomData,
         })
@@ -419,8 +446,12 @@ where
         // convert to the MHz value to simplify nanosecond calculations
         let src_clock = clocks.apb_clock.as_hz() / 1_000_000;
 
-        self.rmt_buffer.fill(zero_pulse(&t, src_clock));
-        *self.rmt_buffer.last_mut().unwrap() = PulseCode::end_marker();
+        self.pulses = (zero_pulse(&t, src_clock), one_pulse(&t, src_clock));
+        self.reset_pulse = reset_pulse(&t, src_clock);
+
+        self.rmt_buffer[..(BUFFER_SIZE - 2)].fill(zero_pulse(&t, src_clock));
+        self.rmt_buffer[BUFFER_SIZE - 2] = self.reset_pulse;
+        self.rmt_buffer[BUFFER_SIZE - 1] = PulseCode::end_marker();
     }
 
     /// Create and store RMT data from the color information provided.
@@ -428,6 +459,7 @@ where
         &mut self,
         iterator: impl IntoIterator<Item = impl Into<C>>,
     ) -> Result<(), AdapterError> {
+        self.buffer_valid = false;
         // We always start from the beginning of the buffer
         let mut seq_iter = self.rmt_buffer.iter_mut();
 
@@ -438,8 +470,12 @@ where
             convert_colors_to_pulse::<_, Order>(&item.into(), &mut seq_iter, self.pulses)?;
         }
 
+        // add a reset
+        *seq_iter.next().ok_or(AdapterError::BufferSizeExceeded)? = self.reset_pulse;
         // Finally, add an end element.
         *seq_iter.next().ok_or(AdapterError::BufferSizeExceeded)? = PulseCode::end_marker();
+
+        self.buffer_valid = true;
 
         Ok(())
     }
@@ -469,6 +505,9 @@ where
 {
     /// Transmit existing LED data via the RMT peripheral.
     pub fn flush(&mut self) -> Result<(), AdapterError> {
+        if !self.buffer_valid {
+            return Err(AdapterError::BufferNotReady);
+        }
         // Perform the actual RMT operation. We use the u32 values here right away.
         let channel = self.channel.take().unwrap();
         // TODO: If the transmit fails, we’re in an unsafe state and future calls to write() will panic.
