@@ -422,13 +422,10 @@ where
 
         let reset_pulse = reset_pulse(&timing, src_clock);
 
-        let mut rmt_buffer = [zero_pulse(&timing, src_clock); _];
-        rmt_buffer[BUFFER_SIZE - 2] = reset_pulse;
-        rmt_buffer[BUFFER_SIZE - 1] = PulseCode::end_marker();
         Ok(Self {
             channel: Some(channel),
-            rmt_buffer,
-            buffer_valid: true,
+            rmt_buffer: [PulseCode::end_marker(); BUFFER_SIZE],
+            buffer_valid: false,
             pulses: (
                 zero_pulse(&timing, src_clock),
                 one_pulse(&timing, src_clock),
@@ -448,10 +445,7 @@ where
 
         self.pulses = (zero_pulse(&t, src_clock), one_pulse(&t, src_clock));
         self.reset_pulse = reset_pulse(&t, src_clock);
-
-        self.rmt_buffer[..(BUFFER_SIZE - 2)].fill(zero_pulse(&t, src_clock));
-        self.rmt_buffer[BUFFER_SIZE - 2] = self.reset_pulse;
-        self.rmt_buffer[BUFFER_SIZE - 1] = PulseCode::end_marker();
+        self.buffer_valid = false;
     }
 
     /// Create and store RMT data from the color information provided.
