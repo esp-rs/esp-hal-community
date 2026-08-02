@@ -355,9 +355,9 @@ const fn reset_pulse(t: &Timing, src_clock_mhz: u32) -> PulseCode {
     let reset_half = (t.reset / 2) as u32;
     PulseCode::new(
         Level::Low,
-        ((reset_half * src_clock_mhz / 2) / 1000) as u16,
+        ((reset_half * src_clock_mhz * 2) / 1000) as u16,
         Level::Low,
-        ((reset_half * src_clock_mhz / 2) / 1000) as u16,
+        ((reset_half * src_clock_mhz * 2) / 1000) as u16,
     )
 }
 
