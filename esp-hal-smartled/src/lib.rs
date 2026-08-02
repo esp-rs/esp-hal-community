@@ -324,7 +324,8 @@ where
     channel: Option<Channel<'d, Mode, Tx>>,
     rmt_buffer: [PulseCode; BUFFER_SIZE],
     buffer_valid: bool,
-    pulses: (PulseCode, PulseCode),
+    zero_pulse: PulseCode,
+    one_pulse: PulseCode,
     reset_pulse: PulseCode,
     _order: PhantomData<Order>,
     _color: PhantomData<C>,
@@ -415,36 +416,40 @@ where
 
         let channel = channel.configure_tx(&config)?.with_pin(pin);
 
-        // Assume the RMT peripheral is set up to use the APB clock
-        let clocks = Clocks::get();
-        // convert to the MHz value to simplify nanosecond calculations
-        let src_clock = clocks.apb_clock.as_hz() / 1_000_000;
-
-        let reset_pulse = reset_pulse(&timing, src_clock);
+        let (zero_pulse, one_pulse, reset_pulse) = Self::get_timings_for(&timing);
 
         Ok(Self {
             channel: Some(channel),
             rmt_buffer: [PulseCode::end_marker(); BUFFER_SIZE],
             buffer_valid: false,
-            pulses: (
-                zero_pulse(&timing, src_clock),
-                one_pulse(&timing, src_clock),
-            ),
+            zero_pulse,
+            one_pulse,
             reset_pulse,
             _order: PhantomData,
             _color: PhantomData,
         })
     }
 
-    /// Sets the timing
-    pub fn set_timing(&mut self, t: Timing) {
+    /// Returns (zero_pulse, one_pulse, reset_pulse)
+    fn get_timings_for(t: &Timing) -> (PulseCode, PulseCode, PulseCode) {
         // Assume the RMT peripheral is set up to use the APB clock
         let clocks = Clocks::get();
         // convert to the MHz value to simplify nanosecond calculations
         let src_clock = clocks.apb_clock.as_hz() / 1_000_000;
 
-        self.pulses = (zero_pulse(&t, src_clock), one_pulse(&t, src_clock));
-        self.reset_pulse = reset_pulse(&t, src_clock);
+        (
+            zero_pulse(t, src_clock),
+            one_pulse(&t, src_clock),
+            reset_pulse(&t, src_clock),
+        )
+    }
+
+    /// Sets the timing
+    pub fn set_timing(&mut self, t: Timing) {
+        let (zero_pulse, one_pulse, reset_pulse) = Self::get_timings_for(&t);
+        self.zero_pulse = zero_pulse;
+        self.one_pulse = one_pulse;
+        self.reset_pulse = reset_pulse;
         self.buffer_valid = false;
     }
 
@@ -461,7 +466,12 @@ where
         // This will result in an `BufferSizeExceeded` error in case
         // the iterator provides more elements than the buffer can take.
         for item in iterator {
-            convert_colors_to_pulse::<_, Order>(&item.into(), &mut seq_iter, self.pulses)?;
+            convert_colors_to_pulse::<_, Order>(
+                &item.into(),
+                &mut seq_iter,
+                self.zero_pulse,
+                self.one_pulse,
+            )?;
         }
 
         // add a reset
@@ -488,7 +498,12 @@ where
             .get_mut(buffer_start_index..)
             .ok_or(AdapterError::BufferSizeExceeded)?
             .iter_mut();
-        convert_colors_to_pulse::<_, Order>(&color.into(), &mut buffer_iter, self.pulses)
+        convert_colors_to_pulse::<_, Order>(
+            &color.into(),
+            &mut buffer_iter,
+            self.zero_pulse,
+            self.one_pulse,
+        )
     }
 }
 
@@ -584,14 +599,20 @@ where
 fn convert_colors_to_pulse<'a, C, Order>(
     value: &C,
     mut_iter: &mut impl Iterator<Item = &'a mut PulseCode>,
-    pulses: (PulseCode, PulseCode),
+    zero_pulse: PulseCode,
+    one_pulse: PulseCode,
 ) -> Result<(), AdapterError>
 where
     C: Color,
     Order: ColorOrder<C>,
 {
     for channel in 0..C::CHANNELS {
-        convert_channel_to_pulses(Order::get_channel_data(value, channel), mut_iter, pulses)?;
+        convert_channel_to_pulses(
+            Order::get_channel_data(value, channel),
+            mut_iter,
+            zero_pulse,
+            one_pulse,
+        )?;
     }
 
     Ok(())
@@ -600,7 +621,8 @@ where
 fn convert_channel_to_pulses<'a, N>(
     channel_value: N,
     mut_iter: &mut impl Iterator<Item = &'a mut PulseCode>,
-    pulses: (PulseCode, PulseCode),
+    zero_pulse: PulseCode,
+    one_pulse: PulseCode,
 ) -> Result<(), AdapterError>
 where
     N: Unsigned + Into<usize>,
@@ -609,8 +631,8 @@ where
     for index in (0..size_of::<N>() * 8).rev() {
         let position = 1 << index;
         *mut_iter.next().ok_or(AdapterError::BufferSizeExceeded)? = match channel_value & position {
-            0 => pulses.0,
-            _ => pulses.1,
+            0 => zero_pulse,
+            _ => one_pulse,
         }
     }
 
