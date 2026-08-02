@@ -39,6 +39,10 @@ This crate uses the unstable RMT peripheral from esp-hal. Therefore, it is compa
 
 ### Migration
 
+- `0.29`
+  - Updated to esp-hal 1.1.1.
+  - The timings are now specified with a `Timings` struct instead of a constant parameter. This allows you to change the timing at runtime using `set_timing`. Check the example for more information on how to use the modified constructor. (Thanks @tommasoclini!)
+  - Add `Grbw` color order. (Thanks @samphonic!)
 - `0.28.2`
   - Updated to esp-hal 1.1.
   - Work around the fact that the APB clock speed does not seem to match the RMT base clock speed anymore. This is hopefully a temporary fix until we can properly read and configure the RMT base clock.
