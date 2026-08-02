@@ -50,12 +50,12 @@ use esp_hal::{
 use num_traits::Unsigned;
 use smart_leds_trait::{CctWhite, RGB, RGBCCT, RGBW, SmartLedsWrite, SmartLedsWriteAsync, White};
 
-/// Timings struct.
+/// Defines the timing for a certain smart LED type.
 ///
 /// All common smart LEDs are controlled by sending PWM-like pulses, in two different configurations for high and low.
 /// The required timings (and tolerances) can be found in the relevant datasheets.
 ///
-/// Provided timings: [`Sk68xxTiming`], [`Ws2812bTiming`], [`Ws2811Timing`], [`Ws2812Timing`]
+/// Provided timings: [`SK68XX_TIMING`], [`WS2812B_TIMING`], [`WS2811_TIMING`], [`WS2812_TIMING`].
 #[derive(Clone, Copy)]
 pub struct Timing {
     /// Low time for zero pulse, in nanoseconds.
@@ -66,10 +66,11 @@ pub struct Timing {
     pub time_1_low: u16,
     /// High time for one pulse, in nanoseconds.
     pub time_1_high: u16,
-    /// Time for the reset after end of transmission, in nanoseconds, in ws2812
-    /// it's 50us.
+    /// Time for the reset that is required in between transmissions, in nanoseconds.
     pub reset: u16,
 }
+
+const WS28XX_RESET: u16 = 50_000;
 
 const SK68XX_CODE_PERIOD: u16 = 1200;
 const SK68XX_TIME_0_HIGH: u16 = 320;
@@ -80,7 +81,7 @@ pub const SK68XX_TIMING: Timing = Timing {
     time_0_low: SK68XX_CODE_PERIOD - SK68XX_TIME_0_HIGH,
     time_1_high: SK68XX_TIME_1_HIGH,
     time_1_low: SK68XX_CODE_PERIOD - SK68XX_TIME_1_HIGH,
-    reset: 50_000,
+    reset: WS28XX_RESET,
 };
 
 /// Timing for the WS2812B LEDs.
@@ -89,7 +90,7 @@ pub const WS2812B_TIMING: Timing = Timing {
     time_0_low: 800,
     time_1_high: 850,
     time_1_low: 450,
-    reset: 50_000,
+    reset: WS28XX_RESET,
 };
 
 /// Timing for the WS2812 LEDs.
@@ -98,7 +99,7 @@ pub const WS2812_TIMING: Timing = Timing {
     time_0_low: 700,
     time_1_high: 800,
     time_1_low: 600,
-    reset: 50_000,
+    reset: WS28XX_RESET,
 };
 
 /// Timing for the WS2811 driver ICs, low-speed mode.
@@ -107,7 +108,7 @@ pub const WS2811_LOW_SPEED_TIMING: Timing = Timing {
     time_0_low: 2000,
     time_1_high: 1200,
     time_1_low: 1300,
-    reset: 50_000,
+    reset: WS28XX_RESET,
 };
 
 /// Timing for the WS2811 driver ICs, high-speed mode.
@@ -116,7 +117,7 @@ pub const WS2811_TIMING: Timing = Timing {
     time_0_low: WS2811_LOW_SPEED_TIMING.time_0_low / 2,
     time_1_high: WS2811_LOW_SPEED_TIMING.time_1_high / 2,
     time_1_low: WS2811_LOW_SPEED_TIMING.time_1_low / 2,
-    reset: 50_000,
+    reset: WS28XX_RESET,
 };
 
 /// All types of errors that can happen during the conversion and transmission
@@ -313,8 +314,6 @@ pub mod color_order {
 /// When the driver mode is [`Blocking`], this type implements the blocking [`SmartLedsWrite`] interface.
 /// When the driver mode is [`Async`], this type implements the [`SmartLedsWriteAsync`] interface instead.
 /// (You usually don’t need to choose this manually, Rust can deduce it from the passed-in RMT channel.)
-///
-/// Some common configurations have predefined aliases: [`Ws2812SmartLeds`], [`Sk68xxRgbwSmartLeds`], [`WhiteSmartLeds`], [`Rgb8RmtSmartLeds`].
 pub struct RmtSmartLeds<'d, const BUFFER_SIZE: usize, Mode, C, Order>
 where
     Mode: DriverMode,
@@ -352,6 +351,7 @@ const fn one_pulse(t: &Timing, src_clock_mhz: u32) -> PulseCode {
     )
 }
 
+/// Returns the reset pulse code, given the RMT source clock’s speed in MHz.
 const fn reset_pulse(t: &Timing, src_clock_mhz: u32) -> PulseCode {
     let reset_half = (t.reset / 2) as u32;
     PulseCode::new(
@@ -370,7 +370,8 @@ where
 {
     /// Creates a new [`RmtSmartLeds`] that drives the provided output using the given RMT channel.
     ///
-    /// Note that calling this function usually requires you to specify the desired buffer size, [`ColorOrder`] and [`Timing`]. See the struct documentation for details.
+    /// Note that calling this function usually requires you to specify the desired buffer size, [`ColorOrder`] and [`Timing`].
+    /// See the struct documentation for details.
     ///
     /// If you want to reuse the channel afterwards, you can use [`esp_hal::rmt::ChannelCreator::reborrow`] to create a shorter-lived derived channel.
     ///
@@ -386,7 +387,8 @@ where
     }
     /// Creates a new [`RmtSmartLeds`] that drives the provided output using the given RMT channel.
     ///
-    /// Note that calling this function usually requires you to specify the desired buffer size, [`ColorOrder`] and [`Timing`]. See the struct documentation for details.
+    /// Note that calling this function usually requires you to specify the desired buffer size and [`ColorOrder`].
+    /// See the struct documentation for details.
     ///
     /// If you want to reuse the channel afterwards, you can use [`esp_hal::rmt::ChannelCreator::reborrow`] to create a shorter-lived derived channel.
     ///
@@ -444,7 +446,7 @@ where
         )
     }
 
-    /// Sets the timing
+    /// Modifies the timing for the LED driver.
     pub fn set_timing(&mut self, t: Timing) {
         let (zero_pulse, one_pulse, reset_pulse) = Self::get_timings_for(&t);
         self.zero_pulse = zero_pulse;
