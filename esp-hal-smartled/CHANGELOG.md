@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.18.0
+
+### Changed
+
+- Updated `esp-hal` to `v1.1.0` and updated related dependencies;
+- Merged the changes made by @kleinesfilmroellchen, who has done a lot of the
+  heavy lifting at making this crate more ergonomic and versatile;
+- Changes on top of his code:
+  - Reset pulse, so now two consecutive or very near in time writes behave correctly;
+  - Timing is a struct, so this means that it can be set at runtime;
+  - Correct ticks calculations for the pulses.
+  - Now when creating the driver, the rmt clock frequency set when creating the
+    Rmt instance must be provided.
+
+
 ## 0.17.0
 
 ### Changed

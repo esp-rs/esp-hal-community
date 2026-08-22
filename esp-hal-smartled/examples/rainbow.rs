@@ -74,10 +74,11 @@ fn main() -> ! {
         let rmt = Rmt::new(peripherals.RMT, freq).expect("Failed to initialize RMT0");
         // Configure color order and timing implementation as needed.
         RmtSmartLeds::<{ buffer_size::<LedColor>(COUNT) }, _, LedColor, color_order::Grb>::new_with_memsize(
-            esp_hal_smartled::WS2812_TIMING,
+            esp_hal_smartled::WS2812_TIMING.with_reset_us(305), // custom reset time
             rmt.channel0,
             led_pin,
             2,
+            freq,
         )
         .unwrap()
     };

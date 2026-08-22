@@ -40,12 +40,12 @@ use core::{fmt::Debug, marker::PhantomData};
 pub use color_order::ColorOrder;
 use esp_hal::{
     Async, Blocking, DriverMode,
-    clock::Clocks,
     gpio::{Level, interconnect::PeripheralOutput},
     rmt::{
         Channel, ConfigError as RmtConfigError, Error as RmtError, PulseCode, Tx, TxChannelConfig,
         TxChannelCreator,
     },
+    time::Rate,
 };
 use num_traits::Unsigned;
 use smart_leds_trait::{CctWhite, RGB, RGBCCT, RGBW, SmartLedsWrite, SmartLedsWriteAsync, White};
@@ -66,11 +66,25 @@ pub struct Timing {
     pub time_1_low: u16,
     /// High time for one pulse, in nanoseconds.
     pub time_1_high: u16,
-    /// Time for the reset that is required in between transmissions, in nanoseconds.
-    pub reset: u16,
+    /// Time for the reset that is required in between transmissions, in microseconds.
+    /// Depending on the rmt's frequency, it can have a maximum of ~800us at 80mhz,
+    /// ~2000us at 32mhz, etc.
+    ///
+    /// The calculation is: max_reset_pulse_us = 0xfffe / rmt_freq_mhz.
+    /// 0xfffe(= 0x7fff * 2) is the max amount of ticks in a single [`PulseCode`].
+    pub reset_us: u16,
 }
 
-const WS28XX_RESET: u16 = 50_000;
+impl Timing {
+    /// Returns this timing configuration with the provided reset time.
+    /// Different revisions of the same led might have different reset times,
+    /// this is the reason behind this function.
+    #[must_use]
+    pub const fn with_reset_us(mut self, reset_us: u16) -> Self {
+        self.reset_us = reset_us;
+        self
+    }
+}
 
 const SK68XX_CODE_PERIOD: u16 = 1200;
 const SK68XX_TIME_0_HIGH: u16 = 320;
@@ -81,7 +95,7 @@ pub const SK68XX_TIMING: Timing = Timing {
     time_0_low: SK68XX_CODE_PERIOD - SK68XX_TIME_0_HIGH,
     time_1_high: SK68XX_TIME_1_HIGH,
     time_1_low: SK68XX_CODE_PERIOD - SK68XX_TIME_1_HIGH,
-    reset: WS28XX_RESET,
+    reset_us: 300,
 };
 
 /// Timing for the WS2812B LEDs.
@@ -90,7 +104,7 @@ pub const WS2812B_TIMING: Timing = Timing {
     time_0_low: 800,
     time_1_high: 850,
     time_1_low: 450,
-    reset: WS28XX_RESET,
+    reset_us: 300,
 };
 
 /// Timing for the WS2812 LEDs.
@@ -99,7 +113,7 @@ pub const WS2812_TIMING: Timing = Timing {
     time_0_low: 700,
     time_1_high: 800,
     time_1_low: 600,
-    reset: WS28XX_RESET,
+    reset_us: 80,
 };
 
 /// Timing for the WS2811 driver ICs, low-speed mode.
@@ -108,7 +122,7 @@ pub const WS2811_LOW_SPEED_TIMING: Timing = Timing {
     time_0_low: 2000,
     time_1_high: 1200,
     time_1_low: 1300,
-    reset: WS28XX_RESET,
+    reset_us: 300,
 };
 
 /// Timing for the WS2811 driver ICs, high-speed mode.
@@ -117,7 +131,7 @@ pub const WS2811_TIMING: Timing = Timing {
     time_0_low: WS2811_LOW_SPEED_TIMING.time_0_low / 2,
     time_1_high: WS2811_LOW_SPEED_TIMING.time_1_high / 2,
     time_1_low: WS2811_LOW_SPEED_TIMING.time_1_low / 2,
-    reset: WS28XX_RESET,
+    reset_us: 300,
 };
 
 /// All types of errors that can happen during the conversion and transmission
@@ -343,40 +357,50 @@ where
     zero_pulse: PulseCode,
     one_pulse: PulseCode,
     reset_pulse: PulseCode,
+    rmt_freq: Rate,
     _order: PhantomData<Order>,
     _color: PhantomData<C>,
 }
 
 /// Returns the pulse code for a zero bit, given the RMT source clock’s speed in MHz.
-const fn zero_pulse(t: &Timing, src_clock_mhz: u32) -> PulseCode {
-    PulseCode::new(
+fn zero_pulse(t: &Timing, src_clock_mhz: u32) -> Option<PulseCode> {
+    PulseCode::try_new(
         Level::High,
-        // FIXME: For some reason, we transmit half as many pulses as necessary. This broke somewhere between esp-hal 1.0 and 1.1.
-        //        It’s definitely not the clock reporting’s fault, but that’s all we know.
-        ((t.time_0_high as u32 * src_clock_mhz * 2) / 1000) as u16,
+        (t.time_0_high as u32 * src_clock_mhz) / 1000,
         Level::Low,
-        ((t.time_0_low as u32 * src_clock_mhz * 2) / 1000) as u16,
+        (t.time_0_low as u32 * src_clock_mhz) / 1000,
     )
 }
 /// Returns the pulse code for a one bit, given the RMT source clock’s speed in MHz.
-const fn one_pulse(t: &Timing, src_clock_mhz: u32) -> PulseCode {
-    PulseCode::new(
+fn one_pulse(t: &Timing, src_clock_mhz: u32) -> Option<PulseCode> {
+    PulseCode::try_new(
         Level::High,
-        ((t.time_1_high as u32 * src_clock_mhz * 2) / 1000) as u16,
+        (t.time_1_high as u32 * src_clock_mhz) / 1000,
         Level::Low,
-        ((t.time_1_low as u32 * src_clock_mhz * 2) / 1000) as u16,
+        (t.time_1_low as u32 * src_clock_mhz) / 1000,
     )
 }
 
 /// Returns the reset pulse code, given the RMT source clock’s speed in MHz.
-const fn reset_pulse(t: &Timing, src_clock_mhz: u32) -> PulseCode {
-    let reset_half = (t.reset / 2) as u32;
-    PulseCode::new(
+fn reset_pulse(t: &Timing, src_clock_mhz: u32) -> Option<PulseCode> {
+    let reset_half = (t.reset_us / 2) as u32;
+    PulseCode::try_new(
         Level::Low,
-        ((reset_half * src_clock_mhz * 2) / 1000) as u16,
+        reset_half * src_clock_mhz,
         Level::Low,
-        ((reset_half * src_clock_mhz * 2) / 1000) as u16,
+        reset_half * src_clock_mhz,
     )
+}
+
+/// Error returned when creating the driver
+#[derive(Debug, thiserror::Error)]
+pub enum CreationError {
+    /// Failed to satisfy the requested timing
+    #[error("could not calculate valid pulses for the provided timing")]
+    Timing,
+    /// RMT configuration error
+    #[error("{_0:?}")]
+    RmtConfig(#[from] RmtConfigError),
 }
 
 impl<'d, const BUFFER_SIZE: usize, Mode, C, Order> RmtSmartLeds<'d, BUFFER_SIZE, Mode, C, Order>
@@ -395,12 +419,17 @@ where
     /// # Errors
     ///
     /// If any configuration issue with the RMT [`Channel`] occurs, the error will be returned.
-    pub fn new<Ch, P>(timing: Timing, channel: Ch, pin: P) -> Result<Self, RmtConfigError>
+    pub fn new<Ch, P>(
+        timing: Timing,
+        channel: Ch,
+        pin: P,
+        rmt_freq: Rate,
+    ) -> Result<Self, CreationError>
     where
         Ch: TxChannelCreator<'d, Mode>,
         P: PeripheralOutput<'d>,
     {
-        Self::new_with_memsize(timing, channel, pin, 1)
+        Self::new_with_memsize(timing, channel, pin, 1, rmt_freq)
     }
     /// Creates a new [`RmtSmartLeds`] that drives the provided output using the given RMT channel.
     ///
@@ -421,7 +450,8 @@ where
         channel: Ch,
         pin: P,
         memsize: u8,
-    ) -> Result<Self, RmtConfigError>
+        rmt_freq: Rate,
+    ) -> Result<Self, CreationError>
     where
         Ch: TxChannelCreator<'d, Mode>,
         P: PeripheralOutput<'d>,
@@ -435,7 +465,8 @@ where
 
         let channel = channel.configure_tx(&config)?.with_pin(pin);
 
-        let (zero_pulse, one_pulse, reset_pulse) = Self::get_timings_for(&timing);
+        let (zero_pulse, one_pulse, reset_pulse) =
+            Self::get_timings_for(&timing, rmt_freq).ok_or(CreationError::Timing)?;
 
         Ok(Self {
             channel: Some(channel),
@@ -444,32 +475,37 @@ where
             zero_pulse,
             one_pulse,
             reset_pulse,
+            rmt_freq,
             _order: PhantomData,
             _color: PhantomData,
         })
     }
 
     /// Returns (zero_pulse, one_pulse, reset_pulse)
-    fn get_timings_for(t: &Timing) -> (PulseCode, PulseCode, PulseCode) {
-        // Assume the RMT peripheral is set up to use the APB clock
-        let clocks = Clocks::get();
+    pub fn get_timings_for(
+        t: &Timing,
+        rmt_freq: Rate,
+    ) -> Option<(PulseCode, PulseCode, PulseCode)> {
         // convert to the MHz value to simplify nanosecond calculations
-        let src_clock = clocks.apb_clock.as_hz() / 1_000_000;
+        let src_clock = rmt_freq.as_mhz();
 
-        (
-            zero_pulse(t, src_clock),
-            one_pulse(&t, src_clock),
-            reset_pulse(&t, src_clock),
-        )
+        Some((
+            zero_pulse(t, src_clock)?,
+            one_pulse(t, src_clock)?,
+            reset_pulse(t, src_clock)?,
+        ))
     }
 
     /// Modifies the timing for the LED driver.
-    pub fn set_timing(&mut self, t: Timing) {
-        let (zero_pulse, one_pulse, reset_pulse) = Self::get_timings_for(&t);
+    pub fn set_timing(&mut self, t: Timing) -> Result<(), ()> {
+        let (zero_pulse, one_pulse, reset_pulse) =
+            Self::get_timings_for(&t, self.rmt_freq).ok_or(())?;
         self.zero_pulse = zero_pulse;
         self.one_pulse = one_pulse;
         self.reset_pulse = reset_pulse;
         self.buffer_valid = false;
+
+        Ok(())
     }
 
     /// Create and store RMT data from the color information provided.

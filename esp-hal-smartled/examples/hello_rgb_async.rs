@@ -78,6 +78,7 @@ async fn main(spawner: Spawner) -> ! {
             esp_hal_smartled::WS2812_TIMING,
             rmt.channel0,
             led_pin,
+            freq,
         )
         .unwrap()
     };

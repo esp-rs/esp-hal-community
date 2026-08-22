@@ -1,101 +1,105 @@
 [package]
-name = "esp-hal-smartled2"
-version = "0.29.0"
+name = "esp-hal-smartled"
+version = "0.18.0"
 edition = "2024"
-rust-version = "1.95"
+rust-version = "1.88"
+description = "RMT peripheral adapter for smart LEDs"
+repository = "https://github.com/esp-rs/esp-hal-community"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/kleinesfilmroellchen/esp-hal-smartled"
-documentation = "https://docs.rs/esp-hal-smartled2"
-description = "smart-leds driver for esp-hal using RMT peripheral."
-
-[lib]
-name = "esp_hal_smartled"
-
-[dependencies]
-esp-hal = { version = "1.1.1", default-features = false, features = [
-    "requires-unstable",
-    "unstable",
-] }
-smart-leds-trait = "0.3"
-defmt = { version = "1", optional = true }
-num-traits = { version = "0.2", default-features = false }
-
-[features]
-defmt = [
-    "dep:defmt",
-    "esp-hal/defmt",
-    "esp-bootloader-esp-idf/defmt",
-    "esp-rtos/defmt",
-]
-
-# unfortunately necessary ...
-# not to be used by upstream.
-
-esp32 = [
-    "esp-hal/esp32",
-    "esp-println/esp32",
-    "esp-backtrace/esp32",
-    "esp-bootloader-esp-idf/esp32",
-    "esp-rtos/esp32",
-]
-esp32c2 = [
-    "esp-hal/esp32c2",
-    "esp-println/esp32c2",
-    "esp-backtrace/esp32c2",
-    "esp-bootloader-esp-idf/esp32c2",
-    "esp-rtos/esp32c2",
-]
-esp32c3 = [
-    "esp-hal/esp32c3",
-    "esp-println/esp32c3",
-    "esp-backtrace/esp32c3",
-    "esp-bootloader-esp-idf/esp32c3",
-    "esp-rtos/esp32c3",
-]
-esp32c6 = [
-    "esp-hal/esp32c6",
-    "esp-println/esp32c6",
-    "esp-backtrace/esp32c6",
-    "esp-bootloader-esp-idf/esp32c6",
-    "esp-rtos/esp32c6",
-]
-esp32h2 = [
-    "esp-hal/esp32h2",
-    "esp-println/esp32h2",
-    "esp-backtrace/esp32h2",
-    "esp-bootloader-esp-idf/esp32h2",
-    "esp-rtos/esp32h2",
-]
-esp32s2 = [
-    "esp-hal/esp32s2",
-    "esp-println/esp32s2",
-    "esp-backtrace/esp32s2",
-    "esp-bootloader-esp-idf/esp32s2",
-    "esp-rtos/esp32s2",
-]
-esp32s3 = [
-    "esp-hal/esp32s3",
-    "esp-println/esp32s3",
-    "esp-backtrace/esp32s3",
-    "esp-bootloader-esp-idf/esp32s3",
-    "esp-rtos/esp32s3",
-]
 
 [package.metadata.docs.rs]
 # use a RISC-V chip and target for docs.rs as it doesn’t require a special compiler
 # also enable all optional features
-features = ["esp32c3", "esp-hal/unstable", "defmt"]
-default-target = "riscv32imc-unknown-none-elf"
-targets = ["riscv32imc-unknown-none-elf"]
+features = ["esp32c6", "esp-hal/unstable", "defmt"]
+default-target = "riscv32imac-unknown-none-elf"
+targets = ["riscv32imac-unknown-none-elf"]
+
+[dependencies]
+defmt = { version = "1", optional = true }
+esp-hal = {
+  version = "1.1",
+  default-features = false,
+  features = [
+    "requires-unstable",
+  ]
+}
+num-traits = { version = "0.2", default-features = false }
+smart-leds-trait = "0.3"
+thiserror = { version = "2.0", default-features = false }
 
 [dev-dependencies]
-esp-hal = { version = "1.1.1", features = ["unstable"] }
-esp-rtos = { version = "0.3", features = ["embassy"] }
-esp-backtrace = { version = "0.19", features = ["panic-handler", "println"] }
-esp-println = { version = "0.17", features = ["defmt-espflash", "auto"] }
-embedded-graphics = { version = "0.8" }
-esp-bootloader-esp-idf = { version = "0.5.0" }
-smart-leds = "0.4"
 embassy-executor = "0.10"
-embassy-time = "0.5"
 embassy-futures = "0.1.2"
+embassy-time = "0.5"
+embedded-graphics = { version = "0.8" }
+esp-backtrace = { version = "0.19", features = ["panic-handler", "println"] }
+esp-bootloader-esp-idf = { version = "0.5.0" }
+esp-hal = { version = "1.1.1", features = ["unstable"] }
+esp-println = { version = "0.17", features = ["auto", "defmt-espflash"] }
+esp-rtos = { version = "0.3", features = ["embassy"] }
+smart-leds = "0.4"
+
+[features]
+defmt = [
+  "dep:defmt",
+  "esp-bootloader-esp-idf/defmt",
+  "esp-hal/defmt",
+  "esp-rtos/defmt",
+]
+
+esp32 = [
+  "esp-backtrace/esp32",
+  "esp-bootloader-esp-idf/esp32",
+  "esp-hal/esp32",
+  "esp-println/esp32",
+  "esp-rtos/esp32",
+]
+esp32c2 = [
+  "esp-backtrace/esp32c2",
+  "esp-bootloader-esp-idf/esp32c2",
+  "esp-hal/esp32c2",
+  "esp-println/esp32c2",
+  "esp-rtos/esp32c2",
+]
+esp32c3 = [
+  "esp-backtrace/esp32c3",
+  "esp-bootloader-esp-idf/esp32c3",
+  "esp-hal/esp32c3",
+  "esp-println/esp32c3",
+  "esp-rtos/esp32c3",
+]
+esp32c5 = [
+  "esp-backtrace/esp32c5",
+  "esp-bootloader-esp-idf/esp32c5",
+  "esp-hal/esp32c5",
+  "esp-println/esp32c5",
+  "esp-rtos/esp32c5",
+]
+esp32c6 = [
+  "esp-backtrace/esp32c6",
+  "esp-bootloader-esp-idf/esp32c6",
+  "esp-hal/esp32c6",
+  "esp-println/esp32c6",
+  "esp-rtos/esp32c6",
+]
+esp32h2 = [
+  "esp-backtrace/esp32h2",
+  "esp-bootloader-esp-idf/esp32h2",
+  "esp-hal/esp32h2",
+  "esp-println/esp32h2",
+  "esp-rtos/esp32h2",
+]
+esp32s2 = [
+  "esp-backtrace/esp32s2",
+  "esp-bootloader-esp-idf/esp32s2",
+  "esp-hal/esp32s2",
+  "esp-println/esp32s2",
+  "esp-rtos/esp32s2",
+]
+esp32s3 = [
+  "esp-backtrace/esp32s3",
+  "esp-bootloader-esp-idf/esp32s3",
+  "esp-hal/esp32s3",
+  "esp-println/esp32s3",
+  "esp-rtos/esp32s3",
+]
