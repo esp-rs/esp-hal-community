@@ -1,248 +1,610 @@
-//! This adapter allows for the use of an RMT output channel to easily interact
-//! with RGB LEDs and use the convenience functions of the
-//! [`smart-leds`](https://crates.io/crates/smart-leds) crate.
+//! Allows for the use of an RMT output channel on the ESP32 family to easily drive smart RGB LEDs. This is a driver for the [smart-leds](https://crates.io/crates/smart-leds) framework and allows using the utility functions from this crate as well as higher-level libraries based on smart-leds.
 //!
-//! This is a simple implementation where every LED is adressed in an
-//! individual RMT operation. This is working perfectly fine in blocking mode,
-//! but in case this is used in combination with interrupts that might disturb
-//! the sequential sending, an alternative implementation (addressing the LEDs
-//! in a sequence in a single RMT send operation) might be required!
+//! Different from [ws2812-esp32-rmt-driver](https://crates.io/crates/ws2812-esp32-rmt-driver), which is based on the unofficial `esp-idf` SDK, this crate is based on the official no-std [esp-hal](https://github.com/esp-rs/esp-hal).
+//!
+//! This driver uses either the blocking RMT API, or the async one, depending on the given RMT channel.
+//! The [`SmartLedsWrite`] trait (or [`SmartLedsWriteAsync`]) is implemented for [`RmtSmartLeds`] with the corresponding channel mode.
 //!
 //! ## Example
 //!
-//! ```rust
-//! #![no_std]
-//! #![no_main]
+//! ```rust,ignore
+//! let rmt = Rmt::new(peripherals.RMT, Rate::from_mhz(80)).unwrap();
 //!
-//! use esp_backtrace as _;
-//! use esp_hal::{rmt::Rmt, time::Rate, Config};
-//! use esp_hal_smartled::{smart_led_buffer, SmartLedsAdapter};
-//! use smart_leds::{brightness, colors::*, SmartLedsWrite as _};
+//! let mut led = RmtSmartLeds::<{ buffer_size::<RGB8>(1) }, _, RGB8, color_order::Rgb, Ws2812Timing>::new(
+//!     rmt.channel0, peripherals.GPIO2
+//! );
 //!
-//! #[esp_hal::main]
-//! fn main() -> ! {
-//!     let p = esp_hal::init(Config::default());
-//!     let mut led = {
-//!         let frequency = Rate::from_mhz(80);
-//!         let rmt = Rmt::new(p.RMT, frequency).expect("Failed to initialize RMT0");
-//!         SmartLedsAdapter::new(rmt.channel0, p.GPIO2, smart_led_buffer!(3))
-//!     };
-//!     let level = 10;
-//!     led.write(brightness([RED].into_iter(), level)).unwrap();
-//!
-//!     // Multiple LEDs, also showing a separate list and way to set brightness
-//!     // First in the list is the first in the chain
-//!     let led_state = [ RED, GREEN/2, BLUE/4 ];
-//!     led.write(led_state).unwrap();
-//!
-//!     loop {} // loop forever
-//! }
+//! led.write(brightness([RED], 10)).unwrap();
 //! ```
 //!
-//! ## Feature Flags
-#![doc = document_features::document_features!()]
+//! ## Usage overview
+//!
+//! The [`RmtSmartLeds`] struct implements [`SmartLedsWrite`] or [`SmartLedsWriteAsync`]
+//! and can be used to send color data to connected LEDs.
+//! To initialize a [`RmtSmartLeds`], use [`RmtSmartLeds::new`],
+//! which takes an RMT channel and a [`PeripheralOutput`].
+//! If you want to reuse the channel afterwards, you can use [`esp_hal::rmt::ChannelCreator::reborrow`] to create a shorter-lived derived channel.
+//! [`RmtSmartLeds`] is configured at compile-time to support a variety of LED configurations. See the documentation for [`RmtSmartLeds`] for more info.
+//!
+//! ## Features
+//!
+//! - `defmt`: Derive [`defmt::Format`] on some types.
+//!
+//! Other features provided by this crate are not for external use, they are only used for testing and examples.
 #![doc(html_logo_url = "https://avatars.githubusercontent.com/u/46717278")]
 #![deny(missing_docs)]
 #![no_std]
 
-use core::{fmt::Debug, marker::PhantomData, slice::IterMut};
+use core::{fmt::Debug, marker::PhantomData};
 
+pub use color_order::ColorOrder;
 use esp_hal::{
-    Async, Blocking,
-    clock::Clocks,
+    Async, Blocking, DriverMode,
     gpio::{Level, interconnect::PeripheralOutput},
-    rmt::{Channel, Error as RmtError, PulseCode, Tx, TxChannelConfig, TxChannelCreator},
+    rmt::{
+        Channel, ConfigError as RmtConfigError, Error as RmtError, PulseCode, Tx, TxChannelConfig,
+        TxChannelCreator,
+    },
+    time::Rate,
 };
-use rgb::Grb;
-use smart_leds_trait::{SmartLedsWrite, SmartLedsWriteAsync};
+use num_traits::Unsigned;
+use smart_leds_trait::{CctWhite, RGB, RGBCCT, RGBW, SmartLedsWrite, SmartLedsWriteAsync, White};
 
-// Required RMT RAM to drive one LED.
-// number of channels (r,g,b -> 3) * pulses per channel 8)
-const RMT_RAM_ONE_LED: usize = 3 * 8;
-const RMT_RAM_ONE_RBGW_LED: usize = 4 * 8;
+/// Defines the timing for a certain smart LED type.
+///
+/// All common smart LEDs are controlled by sending PWM-like pulses, in two different configurations for high and low.
+/// The required timings (and tolerances) can be found in the relevant datasheets.
+///
+/// Provided timings: [`SK68XX_TIMING`], [`WS2812B_TIMING`], [`WS2811_TIMING`], [`WS2812_TIMING`].
+#[derive(Clone, Copy)]
+pub struct Timing {
+    /// Low time for zero pulse, in nanoseconds.
+    pub time_0_low: u16,
+    /// High time for zero pulse, in nanoseconds.
+    pub time_0_high: u16,
+    /// Low time for one pulse, in nanoseconds.
+    pub time_1_low: u16,
+    /// High time for one pulse, in nanoseconds.
+    pub time_1_high: u16,
+    /// Time for the reset that is required in between transmissions, in microseconds.
+    /// Depending on the rmt's frequency, it can have a maximum of ~800us at 80mhz,
+    /// ~2000us at 32mhz, etc.
+    ///
+    /// The calculation is: max_reset_pulse_us = 0xfffe / rmt_freq_mhz.
+    /// 0xfffe(= 0x7fff * 2) is the max amount of ticks in a single [`PulseCode`].
+    pub reset_us: u16,
+}
 
-const SK68XX_CODE_PERIOD: u32 = 1250; // 800kHz
-const SK68XX_T0H_NS: u32 = 400; // 300ns per SK6812 datasheet, 400 per WS2812. Some require >350ns for T0H. Others <500ns for T0H.
-const SK68XX_T0L_NS: u32 = SK68XX_CODE_PERIOD - SK68XX_T0H_NS;
-const SK68XX_T1H_NS: u32 = 850; // 900ns per SK6812 datasheet, 850 per WS2812. > 550ns is sometimes enough. Some require T1H >= 2 * T0H. Some require > 300ns T1L.
-const SK68XX_T1L_NS: u32 = SK68XX_CODE_PERIOD - SK68XX_T1H_NS;
+impl Timing {
+    /// Returns this timing configuration with the provided reset time.
+    /// Different revisions of the same led might have different reset times,
+    /// this is the reason behind this function.
+    #[must_use]
+    pub const fn with_reset_us(mut self, reset_us: u16) -> Self {
+        self.reset_us = reset_us;
+        self
+    }
+}
+
+const SK68XX_CODE_PERIOD: u16 = 1200;
+const SK68XX_TIME_0_HIGH: u16 = 320;
+const SK68XX_TIME_1_HIGH: u16 = 640;
+/// Timing for the SK68 collection of LEDs.
+pub const SK68XX_TIMING: Timing = Timing {
+    time_0_high: SK68XX_TIME_0_HIGH,
+    time_0_low: SK68XX_CODE_PERIOD - SK68XX_TIME_0_HIGH,
+    time_1_high: SK68XX_TIME_1_HIGH,
+    time_1_low: SK68XX_CODE_PERIOD - SK68XX_TIME_1_HIGH,
+    reset_us: 300,
+};
+
+/// Timing for the WS2812B LEDs.
+pub const WS2812B_TIMING: Timing = Timing {
+    time_0_high: 400,
+    time_0_low: 800,
+    time_1_high: 850,
+    time_1_low: 450,
+    reset_us: 300,
+};
+
+/// Timing for the WS2812 LEDs.
+pub const WS2812_TIMING: Timing = Timing {
+    time_0_high: 350,
+    time_0_low: 700,
+    time_1_high: 800,
+    time_1_low: 600,
+    reset_us: 80,
+};
+
+/// Timing for the WS2811 driver ICs, low-speed mode.
+pub const WS2811_LOW_SPEED_TIMING: Timing = Timing {
+    time_0_high: 500,
+    time_0_low: 2000,
+    time_1_high: 1200,
+    time_1_low: 1300,
+    reset_us: 300,
+};
+
+/// Timing for the WS2811 driver ICs, high-speed mode.
+pub const WS2811_TIMING: Timing = Timing {
+    time_0_high: WS2811_LOW_SPEED_TIMING.time_0_high / 2,
+    time_0_low: WS2811_LOW_SPEED_TIMING.time_0_low / 2,
+    time_1_high: WS2811_LOW_SPEED_TIMING.time_1_high / 2,
+    time_1_low: WS2811_LOW_SPEED_TIMING.time_1_low / 2,
+    reset_us: 300,
+};
 
 /// All types of errors that can happen during the conversion and transmission
-/// of LED commands
-#[derive(Debug)]
+/// of LED commands.
+#[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub enum LedAdapterError {
-    /// Raised in the event that the provided data container is not large enough
+#[non_exhaustive]
+pub enum AdapterError {
+    /// Raised in the event that the RMT buffer is not large enough.
+    ///
+    /// This almost always points to an issue with the `BUFFER_SIZE` parameter of [`RmtSmartLeds`].
+    /// You should create this parameter using [`buffer_size`], passing in the desired number of LEDs that will be controlled.
     BufferSizeExceeded,
-    /// Raised if something goes wrong in the transmission,
+    /// Raised if something goes wrong in the transmission. This contains the inner HAL error ([`RmtError`]).
     TransmissionError(RmtError),
+    /// Can be returned by flush after a failed write for example
+    BufferNotReady,
 }
 
-impl From<RmtError> for LedAdapterError {
-    fn from(e: RmtError) -> Self {
-        LedAdapterError::TransmissionError(e)
+impl From<RmtError> for AdapterError {
+    fn from(value: RmtError) -> Self {
+        Self::TransmissionError(value)
     }
 }
 
-fn led_pulses_for_clock(src_clock: u32) -> (PulseCode, PulseCode) {
-    (
-        PulseCode::new(
-            Level::High,
-            ((SK68XX_T0H_NS * src_clock) / 1000) as u16,
-            Level::Low,
-            ((SK68XX_T0L_NS * src_clock) / 1000) as u16,
-        ),
-        PulseCode::new(
-            Level::High,
-            ((SK68XX_T1H_NS * src_clock) / 1000) as u16,
-            Level::Low,
-            ((SK68XX_T1L_NS * src_clock) / 1000) as u16,
-        ),
-    )
+/// Utility trait that retrieves metadata about all [`smart_leds_trait`] color types.
+pub trait Color {
+    /// The maximum channel number this color supports.
+    ///
+    /// - For RGB (or any permutation thereof), this is 3.
+    /// - For RGBW, this is 4.
+    /// - For RGBCCT, this is 5.
+    /// - For CCT, this is 2.
+    ///
+    /// Note that this channel count is used by users of [`ColorOrder`] to limit the channel number that’s passed into [`ColorOrder::get_channel_data`].
+    const CHANNELS: u8;
+
+    /// Type of a single channel of this color. Usually [`u8`], but [`u16`] is also used for some LEDs.
+    type ChannelType: Unsigned + Into<usize>;
 }
 
-fn led_config() -> TxChannelConfig {
-    TxChannelConfig::default()
-        .with_clk_divider(1)
-        .with_idle_output_level(Level::Low)
-        .with_carrier_modulation(false)
-        .with_idle_output(true)
+impl<T> Color for RGB<T>
+where
+    T: Unsigned + Into<usize>,
+{
+    const CHANNELS: u8 = 3;
+    type ChannelType = T;
 }
 
-fn convert_to_pulses(
-    value: &[u8],
-    mut_iter: &mut IterMut<PulseCode>,
-    pulses: (PulseCode, PulseCode),
-) -> Result<(), LedAdapterError> {
-    for v in value {
-        convert_rgb_channel_to_pulses(*v, mut_iter, pulses)?;
-    }
-    Ok(())
+impl<T> Color for RGBW<T>
+where
+    T: Unsigned + Into<usize>,
+{
+    const CHANNELS: u8 = 4;
+    type ChannelType = T;
 }
 
-fn convert_rgb_channel_to_pulses(
-    channel_value: u8,
-    mut_iter: &mut IterMut<PulseCode>,
-    pulses: (PulseCode, PulseCode),
-) -> Result<(), LedAdapterError> {
-    for position in [128, 64, 32, 16, 8, 4, 2, 1] {
-        *mut_iter.next().ok_or(LedAdapterError::BufferSizeExceeded)? =
-            match channel_value & position {
-                0 => pulses.0,
-                _ => pulses.1,
-            }
-    }
-
-    Ok(())
+impl<T> Color for RGBCCT<T>
+where
+    T: Unsigned + Into<usize>,
+{
+    const CHANNELS: u8 = 5;
+    type ChannelType = T;
 }
 
-/// Function to calculate the required RMT buffer size for a given number of RGB LEDs when using
-/// the blocking API.
-///
-/// For RGBW leds use [buffer_size_rgbw].
-///
-/// This buffer size is calculated for the synchronous API provided by the [SmartLedsAdapter].
-/// [buffer_size_async] should be used for the asynchronous API.
-pub const fn buffer_size(num_leds: usize) -> usize {
-    // 1 additional pulse for the end delimiter
-    num_leds * RMT_RAM_ONE_LED + 1
+impl<T> Color for White<T>
+where
+    T: Unsigned + Into<usize>,
+{
+    const CHANNELS: u8 = 1;
+    type ChannelType = T;
 }
 
-/// Function to calculate the required RMT buffer size for a given number of RGBW LEDs when using
-/// the blocking API.
-///
-/// For RGB leds use [buffer_size].
-///
-/// This buffer size is calculated for the synchronous API provided by the [SmartLedsAdapter].
-/// [buffer_size_async] should be used for the asynchronous API.
-pub const fn buffer_size_rgbw(num_leds: usize) -> usize {
-    // 1 additional pulse for the end delimiter
-    num_leds * RMT_RAM_ONE_RBGW_LED + 1
+impl<T> Color for CctWhite<T>
+where
+    T: Unsigned + Into<usize>,
+{
+    const CHANNELS: u8 = 2;
+    type ChannelType = T;
 }
 
-/// Macro to allocate a buffer sized for a specific number of LEDs to be
-/// addressed.
-///
-/// For RGBW leds, use `[smart_led_buffer!(NUM_LEDS, RGBW)]` where `NUM_LEDS` is your number of leds.
+/// Calculate the required buffer size for a certain number of LEDs.
+/// This should be used to create the `BUFFER_SIZE` parameter of [`RmtSmartLeds`].
 ///
 /// Attempting to use more LEDs that the buffer is configured for will result in
-/// an `LedAdapterError:BufferSizeExceeded` error.
-#[macro_export]
-macro_rules! smart_led_buffer {
-    ( $num_leds: expr ) => {
-        [::esp_hal::rmt::PulseCode::end_marker(); $crate::buffer_size($num_leds)]
-    };
-    ( $num_leds: expr; RGBW ) => {
-        [::esp_hal::rmt::PulseCode::end_marker(); $crate::buffer_size_rgbw($num_leds)]
-    };
+/// an [`AdapterError::BufferSizeExceeded`] error.
+///
+/// You need to specify the correct color and channel type
+// TODO: As soon as generic expressions are more stabilized, we should be able to do this calculation entirely internally in `RmtSmartLeds`. For now, users have to be careful.
+pub const fn buffer_size<C: Color>(led_count: usize) -> usize {
+    // The size we're assigning here is calculated as following
+    //  (
+    //   Nr. of LEDs
+    //   * channels
+    //   * pulses per channel (=bitcount)
+    //  ) + 1 additional pulse for the end delimiter + 1 reset
+    led_count * (size_of::<C::ChannelType>() * 8) * C::CHANNELS as usize + 2
 }
 
-/// Deprecated alias for [smart_led_buffer] macro.
-#[macro_export]
-#[deprecated]
-macro_rules! smartLedBuffer {
-    ( $num_leds: expr ) => {
-        smart_led_buffer!($num_leds);
-    };
-}
+/// Common [`ColorOrder`] implementations.
+pub mod color_order {
+    use num_traits::Unsigned;
+    use smart_leds_trait::{RGB, RGBW, White};
 
-/// Adapter taking an RMT channel and a specific pin and providing RGB LED
-/// interaction functionality using the `smart-leds` crate
-pub struct SmartLedsAdapter<'ch, const BUFFER_SIZE: usize, Color = Grb<u8>> {
-    channel: Option<Channel<'ch, Blocking, Tx>>,
-    rmt_buffer: &'ch mut [PulseCode; BUFFER_SIZE],
-    pulses: (PulseCode, PulseCode),
-    color: PhantomData<Color>,
-}
+    use crate::Color;
 
-impl<'ch, const BUFFER_SIZE: usize> SmartLedsAdapter<'ch, BUFFER_SIZE, Grb<u8>> {
-    /// Create a new adapter object that drives the pin using the RMT channel.
-    pub fn new<C, O>(channel: C, pin: O, rmt_buffer: &'ch mut [PulseCode; BUFFER_SIZE]) -> Self
-    where
-        O: PeripheralOutput<'ch>,
-        C: TxChannelCreator<'ch, Blocking>,
-    {
-        Self::new_with_color(channel, pin, rmt_buffer)
+    /// Order of colors in the physical LEDs.
+    /// The most common color orders for RGB LEDs are [`Rgb`] (most integrated controllers like WS2812) and [`Grb`].
+    /// Note that discrete ICs have generic channels and are often wired up arbitrarily, so you will have to check which order is correct for your hardware.
+    // Implementations of this should be vacant enums so they can’t be constructed.
+    // This should also be a constant trait once that becomes a stable Rust feature.
+    pub trait ColorOrder<C: Color> {
+        /// Retrieve the output value for the provided channel.
+        /// For instance, if color order is RGB, then the red value will be returned for channel 0,
+        /// the green value for channel 1 and the blue value for channel 2.
+        ///
+        /// The maximum channel number users are allowed to pass in is [`Color::CHANNELS`] minus one.
+        /// If this restriction is not upheld, the implementation may panic.
+        fn get_channel_data(color: &C, channel: u8) -> C::ChannelType;
     }
-}
 
-impl<'ch, const BUFFER_SIZE: usize, Color> SmartLedsAdapter<'ch, BUFFER_SIZE, Color>
-where
-    Color: rgb::ComponentSlice<u8>,
-{
-    /// Create a new adapter object that drives the pin using the RMT channel.
-    pub fn new_with_color<C, O>(
-        channel: C,
-        pin: O,
-        rmt_buffer: &'ch mut [PulseCode; BUFFER_SIZE],
-    ) -> SmartLedsAdapter<'ch, BUFFER_SIZE, Color>
+    macro_rules! color_order_rgb {
+        ($name:ident => $first:ident, $second:ident, $third:ident) => {
+            #[doc = concat!("[`ColorOrder`] ", stringify!($name), ".")]
+            pub enum $name {}
+            impl<T> ColorOrder<RGB<T>> for $name
+            where
+                T: Copy + Unsigned + Into<usize>,
+            {
+                fn get_channel_data(color: &RGB<T>, channel: u8) -> T {
+                    match channel {
+                        0 => color.$first,
+                        1 => color.$second,
+                        2 => color.$third,
+                        _ => unreachable!(),
+                    }
+                }
+            }
+        };
+    }
+
+    color_order_rgb!(Rgb => r, g, b);
+    color_order_rgb!(Rbg => r, b, g);
+    color_order_rgb!(Grb => g, r, b);
+    color_order_rgb!(Gbr => g, b, r);
+    color_order_rgb!(Brg => b, r, g);
+    color_order_rgb!(Bgr => b, g, r);
+
+    /// [`ColorOrder`] RGBW.
+    pub enum Rgbw {}
+    impl<T> ColorOrder<RGBW<T>> for Rgbw
     where
-        O: PeripheralOutput<'ch>,
-        C: TxChannelCreator<'ch, Blocking>,
+        T: Copy + Unsigned + Into<usize>,
     {
-        let channel = channel.configure_tx(pin, led_config()).unwrap();
+        fn get_channel_data(color: &RGBW<T>, channel: u8) -> T {
+            match channel {
+                0 => color.r,
+                1 => color.g,
+                2 => color.b,
+                3 => color.a.0,
+                _ => unreachable!(),
+            }
+        }
+    }
 
-        // Assume the RMT peripheral is set up to use the APB clock
-        let src_clock = Clocks::get().apb_clock.as_mhz();
+    /// [`ColorOrder`] GRBW.
+    pub enum Grbw {}
+    impl<T> ColorOrder<RGBW<T>> for Grbw
+    where
+        T: Copy + num_traits::sign::Unsigned + Into<usize>,
+    {
+        fn get_channel_data(color: &RGBW<T>, channel: u8) -> T {
+            match channel {
+                0 => color.g,
+                1 => color.r,
+                2 => color.b,
+                3 => color.a.0,
+                _ => unreachable!(),
+            }
+        }
+    }
 
-        Self {
-            channel: Some(channel),
-            rmt_buffer,
-            pulses: led_pulses_for_clock(src_clock),
-            color: PhantomData,
+    /// [`ColorOrder`] for single-channel smart LEDs, where the order is trivial.
+    pub enum SingleChannel {}
+    impl<T> ColorOrder<White<T>> for SingleChannel
+    where
+        T: Copy + Unsigned + Into<usize>,
+    {
+        fn get_channel_data(color: &White<T>, _channel: u8) -> T {
+            color.0
         }
     }
 }
 
-impl<'ch, const BUFFER_SIZE: usize, Color> SmartLedsWrite
-    for SmartLedsAdapter<'ch, BUFFER_SIZE, Color>
+/// [`SmartLedsWrite`] driver implementation using the ESP32’s “remote control” (RMT) peripheral for hardware-offloaded, fast control of smart LEDs.
+///
+/// For usage examples and a general overview see [the crate documentation](`crate`).
+///
+/// This type supports many configurations of color order, LED timings, and LED count. For this reason, there are three main type parameters you have to choose:
+/// - The buffer size. This determines how many RMT pulses can be sent by this driver, and allows it to function entirely without heap allocation. It is strongly recommended to use the [`buffer_size`] function with the desired number of LEDs to choose a correct buffer size, otherwise [`SmartLedsWrite::write`] will return [`AdapterError::BufferSizeExceeded`].
+/// - The `Color`.
+///   This determines the color model and number of channels to be sent.
+/// - The [`ColorOrder`].
+///   This determines what order the LED expects the color values in.
+/// - The [`Timing`].
+///   This determines the smart LED type in use; what kind of signal it expects.
+///   Several implementations for common LED types like WS2812 are provided.
+///   Note that many WS2812-like LEDs are at least almost compatible in their timing, even though the datasheets specify different amounts, the other LEDs’ values are within the tolerance range, and even exceeding these, many LEDs continue to work beyond their specified timing range.
+///   It is however recommended to use the corresponding LED type, or implement your own when needed.
+///
+/// When the driver mode is [`Blocking`], this type implements the blocking [`SmartLedsWrite`] interface.
+/// When the driver mode is [`Async`], this type implements the [`SmartLedsWriteAsync`] interface instead.
+/// (You usually don’t need to choose this manually, Rust can deduce it from the passed-in RMT channel.)
+pub struct RmtSmartLeds<'d, const BUFFER_SIZE: usize, Mode, C, Order>
 where
-    Color: rgb::ComponentSlice<u8>,
+    Mode: DriverMode,
+    C: Color,
+    Order: ColorOrder<C>,
 {
-    type Error = LedAdapterError;
-    type Color = Color;
+    channel: Option<Channel<'d, Mode, Tx>>,
+    rmt_buffer: [PulseCode; BUFFER_SIZE],
+    buffer_valid: bool,
+    zero_pulse: PulseCode,
+    one_pulse: PulseCode,
+    reset_pulse: PulseCode,
+    rmt_freq: Rate,
+    _order: PhantomData<Order>,
+    _color: PhantomData<C>,
+}
 
-    /// Convert all items of the iterator to the RMT format and
+/// Returns the pulse code for a zero bit, given the RMT source clock’s speed in MHz.
+fn zero_pulse(t: &Timing, src_clock_mhz: u32) -> Option<PulseCode> {
+    PulseCode::try_new(
+        Level::High,
+        (t.time_0_high as u32 * src_clock_mhz) / 1000,
+        Level::Low,
+        (t.time_0_low as u32 * src_clock_mhz) / 1000,
+    )
+}
+/// Returns the pulse code for a one bit, given the RMT source clock’s speed in MHz.
+fn one_pulse(t: &Timing, src_clock_mhz: u32) -> Option<PulseCode> {
+    PulseCode::try_new(
+        Level::High,
+        (t.time_1_high as u32 * src_clock_mhz) / 1000,
+        Level::Low,
+        (t.time_1_low as u32 * src_clock_mhz) / 1000,
+    )
+}
+
+/// Returns the reset pulse code, given the RMT source clock’s speed in MHz.
+fn reset_pulse(t: &Timing, src_clock_mhz: u32) -> Option<PulseCode> {
+    let reset_half = (t.reset_us / 2) as u32;
+    PulseCode::try_new(
+        Level::Low,
+        reset_half * src_clock_mhz,
+        Level::Low,
+        reset_half * src_clock_mhz,
+    )
+}
+
+/// Error returned when creating the driver
+#[derive(Debug, thiserror::Error)]
+pub enum CreationError {
+    /// Failed to satisfy the requested timing
+    #[error("could not calculate valid pulses for the provided timing")]
+    Timing,
+    /// RMT configuration error
+    #[error("{_0:?}")]
+    RmtConfig(#[from] RmtConfigError),
+}
+
+impl<'d, const BUFFER_SIZE: usize, Mode, C, Order> RmtSmartLeds<'d, BUFFER_SIZE, Mode, C, Order>
+where
+    Mode: DriverMode,
+    C: Color,
+    Order: ColorOrder<C>,
+{
+    /// Creates a new [`RmtSmartLeds`] that drives the provided output using the given RMT channel.
+    ///
+    /// Note that calling this function usually requires you to specify the desired buffer size, [`ColorOrder`] and [`Timing`].
+    /// See the struct documentation for details.
+    ///
+    /// If you want to reuse the channel afterwards, you can use [`esp_hal::rmt::ChannelCreator::reborrow`] to create a shorter-lived derived channel.
+    ///
+    /// # Errors
+    ///
+    /// If any configuration issue with the RMT [`Channel`] occurs, the error will be returned.
+    pub fn new<Ch, P>(
+        timing: Timing,
+        channel: Ch,
+        pin: P,
+        rmt_freq: Rate,
+    ) -> Result<Self, CreationError>
+    where
+        Ch: TxChannelCreator<'d, Mode>,
+        P: PeripheralOutput<'d>,
+    {
+        Self::new_with_memsize(timing, channel, pin, 1, rmt_freq)
+    }
+    /// Creates a new [`RmtSmartLeds`] that drives the provided output using the given RMT channel.
+    ///
+    /// Note that calling this function usually requires you to specify the desired buffer size and [`ColorOrder`].
+    /// See the struct documentation for details.
+    ///
+    /// If you want to reuse the channel afterwards, you can use [`esp_hal::rmt::ChannelCreator::reborrow`] to create a shorter-lived derived channel.
+    ///
+    /// The `memsize` parameter determines how many RMT blocks this adapter will use.
+    /// If you use any value other than 1, other RMT channels will not be available, as their memory blocks will be used up by this driver.
+    /// However, this can allow you to control many more LEDs without issues.
+    ///
+    /// # Errors
+    ///
+    /// If any configuration issue with the RMT [`Channel`] occurs, the error will be returned.
+    pub fn new_with_memsize<Ch, P>(
+        timing: Timing,
+        channel: Ch,
+        pin: P,
+        memsize: u8,
+        rmt_freq: Rate,
+    ) -> Result<Self, CreationError>
+    where
+        Ch: TxChannelCreator<'d, Mode>,
+        P: PeripheralOutput<'d>,
+    {
+        let config = TxChannelConfig::default()
+            .with_clk_divider(1)
+            .with_idle_output_level(Level::Low)
+            .with_memsize(memsize)
+            .with_carrier_modulation(false)
+            .with_idle_output(true);
+
+        let channel = channel.configure_tx(&config)?.with_pin(pin);
+
+        let (zero_pulse, one_pulse, reset_pulse) =
+            Self::get_timings_for(&timing, rmt_freq).ok_or(CreationError::Timing)?;
+
+        Ok(Self {
+            channel: Some(channel),
+            rmt_buffer: [PulseCode::end_marker(); BUFFER_SIZE],
+            buffer_valid: false,
+            zero_pulse,
+            one_pulse,
+            reset_pulse,
+            rmt_freq,
+            _order: PhantomData,
+            _color: PhantomData,
+        })
+    }
+
+    /// Returns (zero_pulse, one_pulse, reset_pulse)
+    pub fn get_timings_for(
+        t: &Timing,
+        rmt_freq: Rate,
+    ) -> Option<(PulseCode, PulseCode, PulseCode)> {
+        // convert to the MHz value to simplify nanosecond calculations
+        let src_clock = rmt_freq.as_mhz();
+
+        Some((
+            zero_pulse(t, src_clock)?,
+            one_pulse(t, src_clock)?,
+            reset_pulse(t, src_clock)?,
+        ))
+    }
+
+    /// Modifies the timing for the LED driver.
+    pub fn set_timing(&mut self, t: Timing) -> Result<(), ()> {
+        let (zero_pulse, one_pulse, reset_pulse) =
+            Self::get_timings_for(&t, self.rmt_freq).ok_or(())?;
+        self.zero_pulse = zero_pulse;
+        self.one_pulse = one_pulse;
+        self.reset_pulse = reset_pulse;
+        self.buffer_valid = false;
+
+        Ok(())
+    }
+
+    /// Create and store RMT data from the color information provided.
+    fn create_rmt_data(
+        &mut self,
+        iterator: impl IntoIterator<Item = impl Into<C>>,
+    ) -> Result<(), AdapterError> {
+        self.buffer_valid = false;
+        // We always start from the beginning of the buffer
+        let mut seq_iter = self.rmt_buffer.iter_mut();
+
+        // Add all converted iterator items to the buffer.
+        // This will result in an `BufferSizeExceeded` error in case
+        // the iterator provides more elements than the buffer can take.
+        for item in iterator {
+            convert_colors_to_pulse::<_, Order>(
+                &item.into(),
+                &mut seq_iter,
+                self.zero_pulse,
+                self.one_pulse,
+            )?;
+        }
+
+        // add a reset
+        *seq_iter.next().ok_or(AdapterError::BufferSizeExceeded)? = self.reset_pulse;
+        // Finally, add an end element.
+        *seq_iter.next().ok_or(AdapterError::BufferSizeExceeded)? = PulseCode::end_marker();
+
+        self.buffer_valid = true;
+
+        Ok(())
+    }
+
+    /// Write pixel buffer data at certain LED index.
+    /// Does not actually write data to the RMT peripheral.
+    #[allow(unused)]
+    pub(crate) fn write_pixel_data(
+        &mut self,
+        index: usize,
+        color: impl Into<C>,
+    ) -> Result<(), AdapterError> {
+        let buffer_start_index = index * C::CHANNELS as usize * (size_of::<C::ChannelType>() * 8);
+        let mut buffer_iter = self
+            .rmt_buffer
+            .get_mut(buffer_start_index..)
+            .ok_or(AdapterError::BufferSizeExceeded)?
+            .iter_mut();
+        convert_colors_to_pulse::<_, Order>(
+            &color.into(),
+            &mut buffer_iter,
+            self.zero_pulse,
+            self.one_pulse,
+        )
+    }
+}
+
+impl<'d, const BUFFER_SIZE: usize, C, Order> RmtSmartLeds<'d, BUFFER_SIZE, Blocking, C, Order>
+where
+    C: Color,
+    Order: ColorOrder<C>,
+{
+    /// Transmit existing LED data via the RMT peripheral.
+    pub fn flush(&mut self) -> Result<(), AdapterError> {
+        if !self.buffer_valid {
+            return Err(AdapterError::BufferNotReady);
+        }
+        // Perform the actual RMT operation. We use the u32 values here right away.
+        let channel = self.channel.take().unwrap();
+        // TODO: If the transmit fails, we’re in an unsafe state and future calls to write() will panic.
+        // This is currently unavoidable since transmit consumes the channel on error.
+        // This is a known design flaw in the current RMT API and will be fixed soon.
+        // We should adjust our usage accordingly as soon as possible.
+        match channel
+            .transmit(&self.rmt_buffer)
+            .map_err(|(e, _)| e)?
+            .wait()
+        {
+            Ok(chan) => {
+                self.channel = Some(chan);
+                Ok(())
+            }
+            Err((e, chan)) => {
+                self.channel = Some(chan);
+                Err(AdapterError::TransmissionError(e))
+            }
+        }
+    }
+}
+
+impl<'d, const BUFFER_SIZE: usize, C, Order> SmartLedsWrite
+    for RmtSmartLeds<'d, BUFFER_SIZE, Blocking, C, Order>
+where
+    C: Color,
+    Order: ColorOrder<C>,
+{
+    type Error = AdapterError;
+    type Color = C;
+
+    /// Convert all Color items of the iterator to the RMT format and
     /// add them to internal buffer, then start a singular RMT operation
     /// based on that buffer.
     fn write<T, I>(&mut self, iterator: T) -> Result<(), Self::Error>
@@ -250,160 +612,84 @@ where
         T: IntoIterator<Item = I>,
         I: Into<Self::Color>,
     {
-        // We always start from the beginning of the buffer
-        let mut seq_iter = self.rmt_buffer.iter_mut();
-
-        // Add all converted iterator items to the buffer.
-        // This will result in an `BufferSizeExceeded` error in case
-        // the iterator provides more elements than the buffer can take.
-        for item in iterator {
-            convert_to_pulses(item.into().as_slice(), &mut seq_iter, self.pulses)?;
-        }
-
-        // Finally, add an end element.
-        *seq_iter.next().ok_or(LedAdapterError::BufferSizeExceeded)? = PulseCode::end_marker();
-
-        // Perform the actual RMT operation.
-        let channel = self.channel.take().unwrap();
-        match channel.transmit(self.rmt_buffer)?.wait() {
-            Ok(chan) => {
-                self.channel = Some(chan);
-                Ok(())
-            }
-            Err((e, chan)) => {
-                self.channel = Some(chan);
-                Err(LedAdapterError::TransmissionError(e))
-            }
-        }
+        self.create_rmt_data(iterator)?;
+        self.flush()
     }
 }
 
-// Support for asynchronous and non-blocking use of the RMT peripheral to drive smart LEDs.
-
-/// Function to calculate the required RMT buffer size for a given number of RGB LEDs when using
-/// the asynchronous API.
-///
-/// Use [buffer_size_async_rgbw] for RGBW leds.
-///
-/// This buffer size is calculated for the asynchronous API provided by the
-/// [SmartLedsAdapterAsync]. [buffer_size] should be used for the synchronous API.
-pub const fn buffer_size_async(num_leds: usize) -> usize {
-    // 1 byte end delimiter for each transfer.
-    num_leds * (RMT_RAM_ONE_LED + 1)
-}
-
-/// Function to calculate the required RMT buffer size for a given number of RGBW LEDs when using
-/// the asynchronous API.
-///
-/// Use [buffer_size_async] for RGB leds.
-///
-/// This buffer size is calculated for the asynchronous API provided by the
-/// [SmartLedsAdapterAsync]. [buffer_size] should be used for the synchronous API.
-pub const fn buffer_size_async_rgbw(num_leds: usize) -> usize {
-    // 1 byte end delimiter for each transfer.
-    num_leds * (RMT_RAM_ONE_RBGW_LED + 1)
-}
-
-/// Adapter taking an RMT channel and a specific pin and providing RGB LED
-/// interaction functionality.
-pub struct SmartLedsAdapterAsync<'ch, const BUFFER_SIZE: usize, Color = Grb<u8>> {
-    channel: Channel<'ch, Async, Tx>,
-    rmt_buffer: &'ch mut [PulseCode; BUFFER_SIZE],
-    pulses: (PulseCode, PulseCode),
-    color: PhantomData<Color>,
-}
-
-impl<'ch, const BUFFER_SIZE: usize> SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Grb<u8>> {
-    /// Create a new adapter object that drives the pin using the RMT channel.
-    pub fn new<C, O>(channel: C, pin: O, rmt_buffer: &'ch mut [PulseCode; BUFFER_SIZE]) -> Self
-    where
-        O: PeripheralOutput<'ch>,
-        C: TxChannelCreator<'ch, Async>,
-    {
-        Self::new_with_color(channel, pin, rmt_buffer)
-    }
-}
-
-impl<'ch, const BUFFER_SIZE: usize, Color> SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Color>
+impl<'d, const BUFFER_SIZE: usize, C, Order> SmartLedsWriteAsync
+    for RmtSmartLeds<'d, BUFFER_SIZE, Async, C, Order>
 where
-    Color: rgb::ComponentSlice<u8>,
+    C: Color,
+    Order: ColorOrder<C>,
 {
-    /// Create a new adapter object that drives the pin using the RMT channel.
-    pub fn new_with_color<C, O>(
-        channel: C,
-        pin: O,
-        rmt_buffer: &'ch mut [PulseCode; BUFFER_SIZE],
-    ) -> SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Color>
-    where
-        O: PeripheralOutput<'ch>,
-        C: TxChannelCreator<'ch, Async>,
-    {
-        let channel = channel.configure_tx(pin, led_config()).unwrap();
+    type Error = AdapterError;
+    type Color = C;
 
-        // Assume the RMT peripheral is set up to use the APB clock
-        let src_clock = Clocks::get().apb_clock.as_mhz();
-
-        Self {
-            channel,
-            rmt_buffer,
-            pulses: led_pulses_for_clock(src_clock),
-            color: PhantomData,
-        }
-    }
-
-    fn prepare_rmt_buffer<I: Into<Color>>(
-        &mut self,
-        iterator: impl IntoIterator<Item = I>,
-    ) -> Result<(), LedAdapterError> {
-        // We always start from the beginning of the buffer
-        let mut seq_iter = self.rmt_buffer.iter_mut();
-
-        // Add all converted iterator items to the buffer.
-        // This will result in an `BufferSizeExceeded` error in case
-        // the iterator provides more elements than the buffer can take.
-        for item in iterator {
-            Self::convert_to_pulses(item.into().as_slice(), &mut seq_iter, self.pulses)?;
-        }
-        Ok(())
-    }
-
-    /// Async sends one pixel at a time so needs a delimiter after each pixel
-    fn convert_to_pulses(
-        value: &[u8],
-        mut_iter: &mut IterMut<PulseCode>,
-        pulses: (PulseCode, PulseCode),
-    ) -> Result<(), LedAdapterError> {
-        for v in value {
-            convert_rgb_channel_to_pulses(*v, mut_iter, pulses)?;
-        }
-        *mut_iter.next().ok_or(LedAdapterError::BufferSizeExceeded)? = PulseCode::end_marker();
-        Ok(())
-    }
-}
-
-impl<'ch, const BUFFER_SIZE: usize, Color> SmartLedsWriteAsync
-    for SmartLedsAdapterAsync<'ch, BUFFER_SIZE, Color>
-where
-    Color: rgb::ComponentSlice<u8>,
-{
-    type Error = LedAdapterError;
-    type Color = Color;
-
-    /// Convert all items of the iterator to the RMT format and
-    /// add them to internal buffer, then start perform all asynchronous operations based on
-    /// that buffer.
-    async fn write<T, I>(&mut self, iterator: T) -> Result<(), Self::Error>
+    /// Convert all Color items of the iterator to the RMT format and
+    /// add them to internal buffer, then start a singular RMT operation
+    /// based on that buffer.
+    fn write<T, I>(&mut self, iterator: T) -> impl Future<Output = Result<(), Self::Error>>
     where
         T: IntoIterator<Item = I>,
         I: Into<Self::Color>,
     {
-        self.prepare_rmt_buffer(iterator)?;
-        for chunk in self.rmt_buffer.chunks(RMT_RAM_ONE_LED + 1) {
+        // we split the future into a creation part and a sending part
+        // so we can prepare multiple futures and send/await then all at the same time
+        let res = self.create_rmt_data(iterator);
+
+        async move {
+            res?;
+            // Perform the actual RMT operation. We use the u32 values here right away.
             self.channel
-                .transmit(chunk)
-                .await
-                .map_err(LedAdapterError::TransmissionError)?;
+                .as_mut()
+                .unwrap()
+                .transmit(&self.rmt_buffer)
+                .await?;
+            Ok(())
         }
-        Ok(())
     }
+}
+
+fn convert_colors_to_pulse<'a, C, Order>(
+    value: &C,
+    mut_iter: &mut impl Iterator<Item = &'a mut PulseCode>,
+    zero_pulse: PulseCode,
+    one_pulse: PulseCode,
+) -> Result<(), AdapterError>
+where
+    C: Color,
+    Order: ColorOrder<C>,
+{
+    for channel in 0..C::CHANNELS {
+        convert_channel_to_pulses(
+            Order::get_channel_data(value, channel),
+            mut_iter,
+            zero_pulse,
+            one_pulse,
+        )?;
+    }
+
+    Ok(())
+}
+
+fn convert_channel_to_pulses<'a, N>(
+    channel_value: N,
+    mut_iter: &mut impl Iterator<Item = &'a mut PulseCode>,
+    zero_pulse: PulseCode,
+    one_pulse: PulseCode,
+) -> Result<(), AdapterError>
+where
+    N: Unsigned + Into<usize>,
+{
+    let channel_value: usize = channel_value.into();
+    for index in (0..size_of::<N>() * 8).rev() {
+        let position = 1 << index;
+        *mut_iter.next().ok_or(AdapterError::BufferSizeExceeded)? = match channel_value & position {
+            0 => zero_pulse,
+            _ => one_pulse,
+        }
+    }
+
+    Ok(())
 }
