@@ -394,7 +394,7 @@ fn reset_pulse(t: &Timing, src_clock_mhz: u32) -> Option<PulseCode> {
 
 /// Error returned when creating the driver
 #[derive(Debug, thiserror::Error)]
-pub enum CreationError {
+pub enum Error {
     /// Failed to satisfy the requested timing
     #[error("could not calculate valid pulses for the provided timing")]
     Timing,
@@ -419,12 +419,7 @@ where
     /// # Errors
     ///
     /// If any configuration issue with the RMT [`Channel`] occurs, the error will be returned.
-    pub fn new<Ch, P>(
-        timing: Timing,
-        channel: Ch,
-        pin: P,
-        rmt_freq: Rate,
-    ) -> Result<Self, CreationError>
+    pub fn new<Ch, P>(timing: Timing, channel: Ch, pin: P, rmt_freq: Rate) -> Result<Self, Error>
     where
         Ch: TxChannelCreator<'d, Mode>,
         P: PeripheralOutput<'d>,
@@ -451,7 +446,7 @@ where
         pin: P,
         memsize: u8,
         rmt_freq: Rate,
-    ) -> Result<Self, CreationError>
+    ) -> Result<Self, Error>
     where
         Ch: TxChannelCreator<'d, Mode>,
         P: PeripheralOutput<'d>,
@@ -466,7 +461,7 @@ where
         let channel = channel.configure_tx(&config)?.with_pin(pin);
 
         let (zero_pulse, one_pulse, reset_pulse) =
-            Self::get_timings_for(&timing, rmt_freq).ok_or(CreationError::Timing)?;
+            Self::get_timings_for(&timing, rmt_freq).ok_or(Error::Timing)?;
 
         Ok(Self {
             channel: Some(channel),
@@ -497,9 +492,9 @@ where
     }
 
     /// Modifies the timing for the LED driver.
-    pub fn set_timing(&mut self, t: Timing) -> Result<(), ()> {
+    pub fn set_timing(&mut self, t: Timing) -> Result<(), Error> {
         let (zero_pulse, one_pulse, reset_pulse) =
-            Self::get_timings_for(&t, self.rmt_freq).ok_or(())?;
+            Self::get_timings_for(&t, self.rmt_freq).ok_or(Error::Timing)?;
         self.zero_pulse = zero_pulse;
         self.one_pulse = one_pulse;
         self.reset_pulse = reset_pulse;
