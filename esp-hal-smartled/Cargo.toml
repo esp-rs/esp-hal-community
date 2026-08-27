@@ -16,7 +16,7 @@ targets = ["riscv32imac-unknown-none-elf"]
 
 [dependencies]
 defmt = { version = "1", optional = true }
-esp-hal = { version = "1.1", default-features = false, features = ["requires-unstable"] }
+esp-hal = { version = "~1.1", default-features = false, features = ["requires-unstable"] }
 num-traits = { version = "0.2", default-features = false }
 smart-leds-trait = "0.3"
 thiserror = { version = "2.0", default-features = false }
@@ -29,7 +29,7 @@ embassy-time = "0.5"
 embedded-graphics = { version = "0.8" }
 esp-backtrace = { version = "0.19", features = ["panic-handler", "println"] }
 esp-bootloader-esp-idf = { version = "0.5.0" }
-esp-hal = { version = "1.1.1", features = ["unstable"] }
+esp-hal = { version = "~1.1", features = ["unstable"] }
 esp-println = { version = "0.17", features = ["auto", "defmt-espflash"] }
 esp-rtos = { version = "0.3", features = ["embassy"] }
 smart-leds = "0.4"
