@@ -18,7 +18,6 @@ use embassy_executor::Spawner;
 use embassy_futures::join::join;
 use embassy_time::Timer;
 use esp_backtrace as _;
-use esp_hal::interrupt::software::SoftwareInterruptControl;
 use esp_hal::timer::timg::TimerGroup;
 use esp_hal::{rmt::Rmt, time::Rate};
 use esp_hal_smartled::{RmtSmartLeds, buffer_size, color_order};
@@ -34,8 +33,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 async fn main(spawner: Spawner) -> ! {
     let peripherals = esp_hal::init(esp_hal::Config::default());
     let timg0 = TimerGroup::new(peripherals.TIMG0);
-    let software_interrupt = SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
-    esp_rtos::start(timg0.timer0, software_interrupt.software_interrupt0);
+    esp_rtos::start(timg0.timer0, peripherals.FROM_CPU_INTR0);
 
     // Each devkit uses a unique GPIO for the RGB LED.
     cfg_select! {
