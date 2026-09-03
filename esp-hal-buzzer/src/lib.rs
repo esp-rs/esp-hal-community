@@ -36,7 +36,7 @@
 use core::fmt::Debug;
 
 use esp_hal::{
-    clock::Clocks,
+    clock,
     delay::Delay,
     gpio::{AnyPin, DriveMode, Level, Output, OutputConfig, OutputPin},
     ledc::{
@@ -260,7 +260,7 @@ impl<'a> Buzzer<'a> {
         // Max duty resolution for a frequency:
         // Integer(log2(LEDC_APB_CKL / frequency))
         let mut result = 0;
-        let mut value = Clocks::get().apb_clock / Rate::from_hz(frequency);
+        let mut value = Rate::from_hz(clock::ll::apb_clk_frequency()) / Rate::from_hz(frequency);
 
         // Limit duty resolution to 14 bits
         while value > 1 && result < 14 {

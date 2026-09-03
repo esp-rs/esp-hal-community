@@ -2,7 +2,7 @@
 name = "esp-hal-smartled"
 version = "0.18.0"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.95"
 description = "RMT peripheral adapter for smart LEDs"
 repository = "https://github.com/esp-rs/esp-hal-community"
 license = "MIT OR Apache-2.0"
@@ -16,7 +16,7 @@ targets = ["riscv32imac-unknown-none-elf"]
 
 [dependencies]
 defmt = { version = "1", optional = true }
-esp-hal = { version = "~1.1", default-features = false, features = ["requires-unstable"] }
+esp-hal = { version = "~1.2", default-features = false, features = ["requires-unstable"] }
 num-traits = { version = "0.2", default-features = false }
 smart-leds-trait = "0.3"
 thiserror = { version = "2.0", default-features = false }
@@ -27,11 +27,11 @@ embassy-executor = "0.10"
 embassy-futures = "0.1.2"
 embassy-time = "0.5"
 embedded-graphics = { version = "0.8" }
-esp-backtrace = { version = "0.19", features = ["panic-handler", "println"] }
-esp-bootloader-esp-idf = { version = "0.5.0" }
-esp-hal = { version = "~1.1", features = ["unstable"] }
-esp-println = { version = "0.17", features = ["auto", "defmt-espflash"] }
-esp-rtos = { version = "0.3", features = ["embassy"] }
+esp-backtrace = { version = "0.20", features = ["panic-handler", "println"] }
+esp-bootloader-esp-idf = { version = "0.6.0" }
+esp-hal = { version = "~1.2", features = ["unstable"] }
+esp-println = { version = "0.18", features = ["auto", "defmt-espflash"] }
+esp-rtos = { version = "0.4", features = ["embassy"] }
 smart-leds = "0.4"
 
 [features]

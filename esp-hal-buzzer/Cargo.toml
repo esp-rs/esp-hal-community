@@ -2,7 +2,7 @@
 name = "esp-hal-buzzer"
 version = "0.3.0"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.95"
 description  = "Buzzer driver for esp-hal"
 repository   = "https://github.com/esp-rs/esp-hal-community"
 license      = "MIT OR Apache-2.0"
@@ -17,16 +17,16 @@ document-features = "^0.2.12"
 # Unstable required for:
 # - ledc
 # - delay
-esp-hal           = { version = "~1.1", features = ["requires-unstable"] }
+esp-hal           = { version = "~1.2", features = ["requires-unstable"] }
 
 [dev-dependencies]
-esp-backtrace = { version = "0.19", features = [
+esp-backtrace = { version = "0.20", features = [
   "panic-handler",
   "println",
 ] }
-esp-bootloader-esp-idf = "0.5"
-esp-hal = { version = "~1.1", features = ["unstable"] }
-esp-println = "0.17"
+esp-bootloader-esp-idf = "0.6"
+esp-hal = { version = "~1.2", features = ["unstable"] }
+esp-println = "0.18"
 
 [features]
 ## Implement `defmt::Format` on certain types.
