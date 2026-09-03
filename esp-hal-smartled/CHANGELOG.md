@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Updated `esp-hal` to `v1.1.0` and updated related dependencies;
+- Updated `esp-hal` to `v1.2.0` and updated related dependencies;
 - Merged the changes made by @kleinesfilmroellchen, who has done a lot of the
   heavy lifting at making this crate more ergonomic and versatile;
 - Changes on top of his code:
