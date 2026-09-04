@@ -10,8 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Updated `esp-hal` to `v1.2.0` and updated related dependencies;
-- Merged the changes made by @kleinesfilmroellchen, who has done a lot of the
-  heavy lifting at making this crate more ergonomic and versatile;
+- Merged the changes made in [esp-hal-smartled2](https://github.com/kleinesfilmroellchen/esp-hal-smartled)
+  by @kleinesfilmroellchen, who has done a lot of the heavy lifting at making this
+  crate more ergonomic and versatile, with further contributions by @tuxcoder,
+  @annaaurora and @samphonic;
 - Changes on top of his code:
   - Reset pulse, so now two consecutive or very near in time writes behave correctly;
   - Timing is a struct, so this means that it can be set at runtime;
