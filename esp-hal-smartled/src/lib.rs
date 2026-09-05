@@ -26,11 +26,8 @@
 //! If you want to reuse the channel afterwards, you can use [`esp_hal::rmt::ChannelCreator::reborrow`] to create a shorter-lived derived channel.
 //! [`RmtSmartLeds`] is configured at compile-time to support a variety of LED configurations. See the documentation for [`RmtSmartLeds`] for more info.
 //!
-//! ## Features
-//!
-//! - `defmt`: Derive [`defmt::Format`] on some types.
-//!
-//! Other features provided by this crate are not for external use, they are only used for testing and examples.
+//! ## Feature Flags
+#![doc = document_features::document_features!()]
 #![doc(html_logo_url = "https://avatars.githubusercontent.com/u/46717278")]
 #![deny(missing_docs)]
 #![no_std]

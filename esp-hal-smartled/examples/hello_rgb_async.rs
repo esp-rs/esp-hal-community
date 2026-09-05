@@ -52,6 +52,9 @@ async fn main(spawner: Spawner) -> ! {
         feature = "esp32s3" => {
             let led_pin = peripherals.GPIO48;
         }
+        feature = "esp32s31" => {
+            let led_pin = peripherals.GPIO60;
+        }
     }
 
     // Configure RMT peripheral globally

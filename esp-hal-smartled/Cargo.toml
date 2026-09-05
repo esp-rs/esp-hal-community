@@ -16,6 +16,7 @@ targets = ["riscv32imac-unknown-none-elf"]
 
 [dependencies]
 defmt = { version = "1", optional = true }
+document-features = "0.2.12"
 esp-hal = { version = "~1.2", default-features = false, features = ["requires-unstable"] }
 num-traits = { version = "0.2", default-features = false }
 smart-leds-trait = "0.3"
@@ -35,12 +36,15 @@ esp-rtos = { version = "0.4", features = ["embassy"] }
 smart-leds = "0.4"
 
 [features]
+## Implement `defmt::Format` on certain types.
 defmt = [
   "dep:defmt",
   "esp-bootloader-esp-idf/defmt",
   "esp-hal/defmt",
   "esp-rtos/defmt",
 ]
+
+# Chip flags are meant for testing only, so they are not marked for documentation.
 
 esp32 = [
   "esp-backtrace/esp32",
@@ -49,13 +53,7 @@ esp32 = [
   "esp-println/esp32",
   "esp-rtos/esp32",
 ]
-esp32c2 = [
-  "esp-backtrace/esp32c2",
-  "esp-bootloader-esp-idf/esp32c2",
-  "esp-hal/esp32c2",
-  "esp-println/esp32c2",
-  "esp-rtos/esp32c2",
-]
+# C2: no RMT
 esp32c3 = [
   "esp-backtrace/esp32c3",
   "esp-bootloader-esp-idf/esp32c3",
@@ -77,12 +75,20 @@ esp32c6 = [
   "esp-println/esp32c6",
   "esp-rtos/esp32c6",
 ]
+# C61: no RMT
 esp32h2 = [
   "esp-backtrace/esp32h2",
   "esp-bootloader-esp-idf/esp32h2",
   "esp-hal/esp32h2",
   "esp-println/esp32h2",
   "esp-rtos/esp32h2",
+]
+esp32p4 = [
+  "esp-backtrace/esp32p4",
+  "esp-bootloader-esp-idf/esp32p4",
+  "esp-hal/esp32p4",
+  "esp-println/esp32p4",
+  "esp-rtos/esp32p4",
 ]
 esp32s2 = [
   "esp-backtrace/esp32s2",
@@ -97,4 +103,11 @@ esp32s3 = [
   "esp-hal/esp32s3",
   "esp-println/esp32s3",
   "esp-rtos/esp32s3",
+]
+esp32s31 = [
+  "esp-backtrace/esp32s31",
+  "esp-bootloader-esp-idf/esp32s31",
+  "esp-hal/esp32s31",
+  "esp-println/esp32s31",
+  "esp-rtos/esp32s31",
 ]

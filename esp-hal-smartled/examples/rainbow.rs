@@ -17,6 +17,9 @@
 //! The following wiring is assumed for ESP32S3:
 //! - LED => GPIO48
 //!
+//! The following wiring is assumed for ESP32S31:
+//! - LED => GPIO60
+//!
 //! You might need to adjust the color order and timing types during the [`RmtSmartLeds`] initialization.
 
 //% CHIPS: esp32 esp32c3 esp32c6 esp32h2 esp32s2 esp32s3
@@ -55,6 +58,9 @@ fn main() -> ! {
         }
         feature = "esp32s3" => {
             let led_pin = peripherals.GPIO48;
+        }
+        feature = "esp32s31" => {
+            let led_pin = peripherals.GPIO60;
         }
     }
 
