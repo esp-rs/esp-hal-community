@@ -2,5 +2,6 @@
 members = [
     "esp-hal-smartled",
     "esp-hal-buzzer",
+    "es8389",
 ]
 resolver = "3"

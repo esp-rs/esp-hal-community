@@ -71,6 +71,14 @@ jobs:
           soc: ${{ matrix.device.soc }}
           target: ${{ matrix.device.target }}
 
+  test-es8389:
+    name: Test es8389
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p es8389
+
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
@@ -124,3 +132,13 @@ jobs:
           components: rust-src
           targets: "riscv32imac-unknown-none-elf"
       - run: cargo build -p esp-hal-buzzer --features "esp32c6,esp-hal/unstable" --target=riscv32imac-unknown-none-elf
+
+  msrv-es8389:
+    name: MSRV es8389
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88
+        with:
+          targets: "riscv32imac-unknown-none-elf"
+      - run: cargo build -p es8389 --target=riscv32imac-unknown-none-elf
