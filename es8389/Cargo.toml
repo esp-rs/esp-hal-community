@@ -1,0 +1,14 @@
+[package]
+name         = "es8389"
+version      = "0.1.0"
+edition      = "2024"
+authors      = ["Sergio Gasquez <sergio.gasquez@gmail.com>"]
+rust-version = "1.88"
+description  = "no_std async driver for the Everest Semiconductor ES8389 audio codec"
+repository   = "https://github.com/esp-rs/esp-hal-community"
+license      = "MIT OR Apache-2.0"
+keywords     = ["es8389", "codec", "audio", "embedded-hal", "no-std"]
+categories   = ["embedded", "no-std", "hardware-support"]
+
+[dependencies]
+embedded-hal-async = "1.0.0"

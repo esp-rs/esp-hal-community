@@ -5,7 +5,8 @@
   },
   "rust-analyzer.linkedProjects": [
     "esp-hal-buzzer/Cargo.toml",
-    "esp-hal-smartled/Cargo.toml"
+    "esp-hal-smartled/Cargo.toml",
+    "es8389/Cargo.toml"
   ],
   // helps remove rust-analyser errors due to requiring a feature flag and target
   "rust-analyzer.cargo.features": ["esp32c3"], 
