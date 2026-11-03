@@ -391,6 +391,7 @@ fn reset_pulse(t: &Timing, src_clock_mhz: u32) -> Option<PulseCode> {
 
 /// Error returned when creating the driver
 #[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     /// Failed to satisfy the requested timing
     #[error("could not calculate valid pulses for the provided timing")]
